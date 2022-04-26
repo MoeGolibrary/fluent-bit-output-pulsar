@@ -52,7 +52,7 @@ func sendMsg(msg []byte) bool {
     _, err := pulsarProducer.Send(context.Background(), &pulsar.ProducerMessage{
         Payload: msg,
     })
-    log.Printf("pulsar-go -> output msg: %s\n", string(msg))
+    // log.Printf("pulsar-go -> output msg: %s\n", string(msg))
     if err != nil {
         log.Printf("-> err: %v\n", err)
         return false
