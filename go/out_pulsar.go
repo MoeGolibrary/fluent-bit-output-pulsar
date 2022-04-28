@@ -47,7 +47,7 @@ func initPulsar(url string, token string, topic string) bool {
     return true
 }
 
-var msgTotalNumber, msgFailedNumber int = 0
+var msgTotalNumber, msgFailedNumber int = 0, 0
 
 // send msg
 func sendMsg(msg []byte) bool {
