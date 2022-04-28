@@ -47,7 +47,7 @@ func initPulsar(url string, token string, topic string) bool {
     return true
 }
 
-var msgTotalNumber int = 0
+var msgTotalNumber, msgFailedNumber int = 0
 
 // send msg
 func sendMsg(msg []byte) bool {
@@ -56,13 +56,14 @@ func sendMsg(msg []byte) bool {
     })
     // log.Printf("pulsar-go -> output msg: %s\n", string(msg))
     if err != nil {
+		msgFailedNumber++
         log.Printf("-> err: %v\n", err)
         return false
     }
 
 	msgTotalNumber++
 	if 0 == msgTotalNumber % 100 {
-		log.Printf("pulsar-go -> progress: total: %d, last record: %s\n", msgTotalNumber, string(msg))
+		log.Printf("pulsar-go -> progress: total: %d, failed: %d, last record: %s\n", msgTotalNumber, msgFailedNumber, string(msg))
 	}
 
     return true
