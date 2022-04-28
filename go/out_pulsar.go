@@ -47,6 +47,8 @@ func initPulsar(url string, token string, topic string) bool {
     return true
 }
 
+var msgTotalNumber int = 0
+
 // send msg
 func sendMsg(msg []byte) bool {
     _, err := pulsarProducer.Send(context.Background(), &pulsar.ProducerMessage{
@@ -57,6 +59,11 @@ func sendMsg(msg []byte) bool {
         log.Printf("-> err: %v\n", err)
         return false
     }
+
+	msgTotalNumber++
+	if 0 == msgTotalNumber % 100 {
+		log.Printf("pulsar-go -> progress: total: %d, last record: %s\n", msgTotalNumber, string(msg))
+	}
 
     return true
 }
@@ -120,7 +127,7 @@ func FLBPluginFlushCtx(ctx, data unsafe.Pointer, length C.int, tag *C.char) int 
         }
     }
 
-    log.Printf("pulsar-go -> output record: %d\n", count)
+    // log.Printf("pulsar-go -> output record: %d\n", count)
     return output.FLB_OK
 }
 
