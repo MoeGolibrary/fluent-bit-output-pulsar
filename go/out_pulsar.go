@@ -31,7 +31,7 @@ func initPulsar(url string, token string, topic string) bool {
     }
     pulsarClient, err = pulsar.NewClient(opts)
     if err != nil {
-        log.Printf("pulsar-go -> create pulsar client failed: %s, %v\n", url, err)
+        log.Printf("go-pulsar -> create pulsar client failed: %s, %v\n", url, err)
         return false
     }
 
@@ -40,30 +40,29 @@ func initPulsar(url string, token string, topic string) bool {
         CompressionType: pulsar.LZ4,
     })
     if err != nil {
-        log.Printf("pulsar-go -> create pulsar producer failed: %s, %v\n", topic, err)
+        log.Printf("go-pulsar -> create pulsar producer failed: %s, %v\n", topic, err)
         return false
     }
 
     return true
 }
 
-var msgTotalNumber, msgFailedNumber int = 0, 0
+var msgTotalNumber, msgSuccessNumber, msgFailedNumber int = 0, 0, 0
 
 // send msg
 func sendMsg(msg []byte) bool {
     _, err := pulsarProducer.Send(context.Background(), &pulsar.ProducerMessage{
         Payload: msg,
     })
-    // log.Printf("pulsar-go -> output msg: %s\n", string(msg))
+    // log.Printf("go-pulsar -> output msg: %s\n", string(msg))
     if err != nil {
-		msgFailedNumber++
-        log.Printf("-> err: %v\n", err)
+        log.Printf("go-pulsar -> send msg error: %v\n", err)
         return false
     }
 
-	msgTotalNumber++
-	if 0 == msgTotalNumber % 100 {
-		log.Printf("pulsar-go -> progress: total: %d, failed: %d, last record: %s\n", msgTotalNumber, msgFailedNumber, string(msg))
+	msgSuccessNumber++
+	if 0 == msgSuccessNumber % 100 {
+		log.Printf("go-pulsar -> progress: total: %d, success: %d, failed: %d, last record: %s\n", msgTotalNumber, msgSuccessNumber, msgFailedNumber, string(msg))
 	}
 
     return true
@@ -78,12 +77,12 @@ func exitPulsar() {
         pulsarClient.Close()
     }
 
-    log.Printf("pulsar-go -> pulsar shutdown ...")
+    log.Printf("go-pulsar -> pulsar shutdown ...")
 }
 
 //export FLBPluginRegister
 func FLBPluginRegister(ctx unsafe.Pointer) int {
-    log.Printf("pulsar-go -> regisger pulsar go plugin\n")
+    log.Printf("go-pulsar -> regisger pulsar go plugin\n")
     return output.FLBPluginRegister(ctx, "pulsar", "Output to Apache Pulsar")
 }
 
@@ -92,13 +91,13 @@ func FLBPluginInit(plugin unsafe.Pointer) int {
     url := getConfigKey(plugin, "PulsarBrokerUrl")
     topic := getConfigKey(plugin, "Topic")
     token := getConfigKey(plugin, "Token")
-    log.Printf("pulsar-go -> PulsarBrokerUrl: %s, Topic: %s, Token: %s\n", url, topic, maskText(token, 8))
+    log.Printf("go-pulsar -> PulsarBrokerUrl: %s, Topic: %s, Token: %s\n", url, topic, maskText(token, 8))
 
     if !initPulsar(url, token, topic) {
         return output.FLB_ERROR
     }
 
-    log.Printf("pulsar-go -> connect to pulsar ok: %s, %s\n", url, topic)
+    log.Printf("go-pulsar -> connect to pulsar ok: %s, %s\n", url, topic)
     return output.FLB_OK
 }
 
@@ -113,22 +112,27 @@ func FLBPluginFlushCtx(ctx, data unsafe.Pointer, length C.int, tag *C.char) int 
             break
         }
 
-        // log.Printf("pulsar-go -> original record: %v\n", record)
+		msgTotalNumber++
+		
+        // log.Printf("go-pulsar -> original record: %v\n", record)
         formatted := translateData(record)
-        // log.Printf("pulsar-go -> formatted data: %v\n", formatted)
+        // log.Printf("go-pulsar -> formatted data: %v\n", formatted)
         payload, err := json.Marshal(formatted)
 
         if err != nil {
-            log.Printf("pulsar-go -> serialize record error: %v\n", err)
-            return output.FLB_ERROR
-        }
-
-        if sendMsg(payload) {
-            count++
-        }
+			msgFailedNumber++
+            log.Printf("go-pulsar -> serialize record error: %v\n", err)
+            // return output.FLB_ERROR
+        } else {
+			if sendMsg(payload) {
+				count++
+			} else {
+				msgFailedNumber++
+			}
+		}
     }
 
-    // log.Printf("pulsar-go -> output record: %d\n", count)
+    // log.Printf("go-pulsar -> output record: %d\n", count)
     return output.FLB_OK
 }
 
