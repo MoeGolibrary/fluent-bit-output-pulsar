@@ -1,4 +1,4 @@
-FROM fluent/fluent-bit:1.9.2
+FROM fluent/fluent-bit:1.9.3
 
 COPY ./output/out_pulsar.so /fluent-bit/bin/
 
