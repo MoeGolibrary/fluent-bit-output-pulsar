@@ -47,25 +47,30 @@ func initPulsar(url string, token string, topic string) bool {
     return true
 }
 
-var msgTotalNumber, msgSuccessNumber, msgFailedNumber int = 0, 0, 0
+var msgTotalNumber, msgSentNumber, msgSuccessNumber, msgFailedNumber int = 0, 0, 0, 0
 
 // send msg
-func sendMsg(msg []byte) bool {
+func sendMsg(msg []byte) {
     _, err := pulsarProducer.Send(context.Background(), &pulsar.ProducerMessage{
         Payload: msg,
     })
     // log.Printf("go-pulsar -> output msg: %s\n", string(msg))
     if err != nil {
         log.Printf("go-pulsar -> send msg error: %v\n", err)
-        return false
-    }
-
-	msgSuccessNumber++
-	if 0 == msgSuccessNumber % 100 {
-		log.Printf("go-pulsar -> progress: total: %d, success: %d, failed: %d, last record: %s\n", msgTotalNumber, msgSuccessNumber, msgFailedNumber, string(msg))
+    } else {
+	    msgSentNumber++
+	    if 0 == msgSentNumber % 200 {
+            err = pulsarProducer.Flush()
+            if err == nil {
+                msgSuccessNumber++
+                log.Printf("go-pulsar -> flush msg ok !\n")
+            } else {
+                msgFailedNumber++
+                log.Printf("go-pulsar -> flush msg error: %v\n", err)
+            }
+            log.Printf("go-pulsar -> progress: total: %d, sent: %d, success: %d, failed: %d, last record: %s\n", msgTotalNumber, msgSentNumber, msgSuccessNumber, msgFailedNumber, string(msg))
+        }
 	}
-
-    return true
 }
 
 // exit pulsar
@@ -105,7 +110,6 @@ func FLBPluginInit(plugin unsafe.Pointer) int {
 func FLBPluginFlushCtx(ctx, data unsafe.Pointer, length C.int, tag *C.char) int {
     dec := output.NewDecoder(data, int(length))
 
-    count := 0
     for {
         ret, _, record := output.GetRecord(dec)
         if ret != 0 {
@@ -124,11 +128,7 @@ func FLBPluginFlushCtx(ctx, data unsafe.Pointer, length C.int, tag *C.char) int 
             log.Printf("go-pulsar -> serialize record error: %v\n", err)
             // return output.FLB_ERROR
         } else {
-			if sendMsg(payload) {
-				count++
-			} else {
-				msgFailedNumber++
-			}
+			sendMsg(payload)
 		}
     }
 
