@@ -39,7 +39,7 @@ func initPulsar(url string, token string, topic string) bool {
         Topic:           topic,
         CompressionType: pulsar.LZ4,
         BatchingMaxMessages: 200,
-        BatchingMaxSize: 4194304,
+        BatchingMaxSize: 8388608,
     })
     if err != nil {
         log.Printf("go-pulsar -> create pulsar producer failed: %s, %v\n", topic, err)
