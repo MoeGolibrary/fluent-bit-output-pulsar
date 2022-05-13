@@ -51,30 +51,30 @@ var msgTotalNumber, msgSentNumber, msgFlushFailed, msgFailedNumber int = 0, 0, 0
 
 // send msg
 func sendMsg(msg []byte) bool {
-	var ret = true
+    var ret = true
     _, err := pulsarProducer.Send(context.Background(), &pulsar.ProducerMessage{
         Payload: msg,
     })
     // log.Printf("go-pulsar -> output msg: %s\n", string(msg))
     if err != nil {
         log.Printf("go-pulsar -> send msg error: %v\n", err)
-		ret = false
+        ret = false
     } else {
-	    msgSentNumber++
-	    if 0 == msgSentNumber % 200 {
+         msgSentNumber++
+        if 0 == msgSentNumber % 200 {
             err = pulsarProducer.Flush()
             if err == nil {
                 log.Printf("go-pulsar -> flush msg ok !\n")
             } else {
-				ret = false
+                ret = false
                 msgFlushFailed++
                 log.Printf("go-pulsar -> flush msg error: %v\n", err)
             }
             log.Printf("go-pulsar -> progress: total: %d, sent: %d, failed: %d, flush failed: %d, last record: %s\n", msgTotalNumber, msgSentNumber, msgFailedNumber, msgFlushFailed, string(msg))
         }
-	}
+    }
 
-	return ret
+    return ret
 }
 
 // exit pulsar
