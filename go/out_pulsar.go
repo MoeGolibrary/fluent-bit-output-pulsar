@@ -47,30 +47,34 @@ func initPulsar(url string, token string, topic string) bool {
     return true
 }
 
-var msgTotalNumber, msgSentNumber, msgSuccessNumber, msgFailedNumber int = 0, 0, 0, 0
+var msgTotalNumber, msgSentNumber, msgFlushFailed, msgFailedNumber int = 0, 0, 0, 0
 
 // send msg
-func sendMsg(msg []byte) {
+func sendMsg(msg []byte) bool {
+	var ret = true
     _, err := pulsarProducer.Send(context.Background(), &pulsar.ProducerMessage{
         Payload: msg,
     })
     // log.Printf("go-pulsar -> output msg: %s\n", string(msg))
     if err != nil {
         log.Printf("go-pulsar -> send msg error: %v\n", err)
+		ret = false
     } else {
 	    msgSentNumber++
 	    if 0 == msgSentNumber % 200 {
             err = pulsarProducer.Flush()
             if err == nil {
-                msgSuccessNumber++
                 log.Printf("go-pulsar -> flush msg ok !\n")
             } else {
-                msgFailedNumber++
+				ret = false
+                msgFlushFailed++
                 log.Printf("go-pulsar -> flush msg error: %v\n", err)
             }
-            log.Printf("go-pulsar -> progress: total: %d, sent: %d, success: %d, failed: %d, last record: %s\n", msgTotalNumber, msgSentNumber, msgSuccessNumber, msgFailedNumber, string(msg))
+            log.Printf("go-pulsar -> progress: total: %d, sent: %d, failed: %d, flush failed: %d, last record: %s\n", msgTotalNumber, msgSentNumber, msgFailedNumber, msgFlushFailed, string(msg))
         }
 	}
+
+	return ret
 }
 
 // exit pulsar
@@ -128,8 +132,11 @@ func FLBPluginFlushCtx(ctx, data unsafe.Pointer, length C.int, tag *C.char) int 
             log.Printf("go-pulsar -> serialize record error: %v\n", err)
             // return output.FLB_ERROR
         } else {
-			sendMsg(payload)
-		}
+            if !sendMsg(payload) {
+                msgFailedNumber++
+                log.Printf("go-pulsar -> send msg failed !!!\n")
+            }
+        }
     }
 
     // log.Printf("go-pulsar -> output record: %d\n", count)
