@@ -28,7 +28,7 @@ message(STATUS "Project source dir: " ${PROJECT_SOURCE_DIR})
 set(FLB_PATH_ROOT_SOURCE ${FLB_SOURCE})
 include(${FLB_SOURCE}/cmake/libraries.cmake)
 include(${FLB_SOURCE}/cmake/headers.cmake)
-include_directories(${PROJECT_SOURCE_DIR}/out_stdout2)
+include_directories(${PROJECT_SOURCE_DIR}/out_pulsar)
 
 
 # Build plugin
