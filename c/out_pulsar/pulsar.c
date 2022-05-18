@@ -37,7 +37,7 @@ bool flb_pulsar_send_msg(flb_out_pulsar_ctx *ctx, msgpack_object* obj)
     ++ctx->total_number;
     if (0 == ctx->total_number % ctx->show_interval) {
         flb_plg_info(ctx->ins, "publish progress: total: %d, success: %d, failed: %d, last msg: %s",
-            ctx->total_number, ctx->success_number, ctx->failed_number, data);
+            ctx->total_number, ctx->success_number, ctx->failed_number, buf);
     }
 
     return (err == pulsar_result_Ok);
@@ -69,6 +69,7 @@ static void cb_pulsar_flush(struct flb_event_chunk *event_chunk,
     struct flb_time tms;
     msgpack_object *obj;
     msgpack_unpacked result;
+    flb_out_pulsar_ctx *ctx = out_context;
 
     msgpack_unpacked_init(&result);
     while (MSGPACK_UNPACK_SUCCESS == msgpack_unpack_next(&result, event_chunk->data, event_chunk->size, &off)) {
@@ -86,7 +87,7 @@ static int cb_pulsar_exit(void *ctx, struct flb_config *config)
 {
     flb_out_pulsar_destroy((flb_out_pulsar_ctx*)ctx);
 
-    flb_plg_info(ins, "exit pulsar ok!");
+    flb_plg_info(ctx->ins, "exit pulsar ok!");
     return 0;
 }
 
@@ -94,22 +95,22 @@ static int cb_pulsar_exit(void *ctx, struct flb_config *config)
 static struct flb_config_map config_map[] = {
     {
         FLB_CONFIG_MAP_STR, "PulsarUrl", (char *)NULL, 0,
-        FLB_TRUE, offsetof(struct flb_out_pulsar_ctx, url),
+        FLB_TRUE, offsetof(flb_out_pulsar_ctx, url),
         "pulsar broker or proxy url."
     },
     {
         FLB_CONFIG_MAP_STR, "Token", (char *)NULL, 0,
-        FLB_TRUE, offsetof(struct flb_out_pulsar_ctx, token),
+        FLB_TRUE, offsetof(flb_out_pulsar_ctx, token),
         "pulsar authentication token."
     },
     {
         FLB_CONFIG_MAP_STR, "Topic", (char *)NULL, 0,
-        FLB_TRUE, offsetof(struct flb_out_pulsar_ctx, topic),
+        FLB_TRUE, offsetof(flb_out_pulsar_ctx, topic),
         "pulsar producer topic."
     },
     {
         FLB_CONFIG_MAP_INT, "ShowInterval", "200", 0,
-        FLB_TRUE, offsetof(struct flb_out_pulsar_ctx, show_interval),
+        FLB_TRUE, offsetof(flb_out_pulsar_ctx, show_interval),
         "show progress interval number."
     },
     {
