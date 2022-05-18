@@ -75,7 +75,7 @@ static void cb_pulsar_flush(struct flb_event_chunk *event_chunk,
     while (MSGPACK_UNPACK_SUCCESS == msgpack_unpack_next(&result, event_chunk->data, event_chunk->size, &off)) {
         flb_time_pop_from_msgpack(&tms, &result, &obj);
         if (!flb_pulsar_send_msg(ctx, obj)) {
-            flb_plg_error(ins, "initialize pulsar context failed.");
+            flb_plg_error(ctx->ins, "initialize pulsar context failed.");
         }
     }
 
@@ -83,11 +83,12 @@ static void cb_pulsar_flush(struct flb_event_chunk *event_chunk,
     FLB_OUTPUT_RETURN(FLB_OK);
 }
 
-static int cb_pulsar_exit(void *ctx, struct flb_config *config)
+static int cb_pulsar_exit(void *data, struct flb_config *config)
 {
-    flb_out_pulsar_destroy((flb_out_pulsar_ctx*)ctx);
-
+    flb_out_pulsar_ctx *ctx = data;
     flb_plg_info(ctx->ins, "exit pulsar ok!");
+    flb_out_pulsar_destroy(ctx);
+    
     return 0;
 }
 
