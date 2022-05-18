@@ -88,7 +88,7 @@ static int cb_pulsar_exit(void *data, struct flb_config *config)
     flb_out_pulsar_ctx *ctx = data;
     flb_plg_info(ctx->ins, "exit pulsar ok!");
     flb_out_pulsar_destroy(ctx);
-    
+
     return 0;
 }
 
