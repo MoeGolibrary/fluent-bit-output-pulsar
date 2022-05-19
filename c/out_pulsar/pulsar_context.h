@@ -25,5 +25,5 @@ typedef struct _flb_out_pulsar_context
     struct flb_output_instance *ins;
 } flb_out_pulsar_ctx;
 
-flb_out_pulsar_ctx* flb_out_pulsar_create(const struct flb_output_instance *ins, const struct flb_config* config);
+flb_out_pulsar_ctx* flb_out_pulsar_create(struct flb_output_instance *ins, struct flb_config* config);
 void flb_out_pulsar_destroy(flb_out_pulsar_ctx* ctx);

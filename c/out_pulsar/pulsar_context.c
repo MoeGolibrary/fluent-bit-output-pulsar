@@ -21,7 +21,7 @@ char* append_log_text(char *config, const char *key, const char* value)
     return config;
 }
 
-flb_out_pulsar_ctx* flb_out_pulsar_create(const struct flb_output_instance *ins, const struct flb_config* config)
+flb_out_pulsar_ctx* flb_out_pulsar_create(struct flb_output_instance *ins, struct flb_config* config)
 {
     int ret;
     pulsar_result err;
@@ -86,18 +86,19 @@ flb_out_pulsar_ctx* flb_out_pulsar_create(const struct flb_output_instance *ins,
     if (ctx->token) {
         ctx->token_len = strlen(ctx->token);
         ctx->authentication = pulsar_authentication_token_create(ctx->token);
-        pulsar_client_configuration_set_auth(ctx->conf, authentication);
+        pulsar_client_configuration_set_auth(ctx->client_conf, ctx->authentication);
         plog = append_log_text(plog, "    Token:                              ", ctx->token);
+    } else {
+        ctx->token_len = 0;
     }
-
 
     pvalue = flb_output_get_property("MemoryLimit", ins);
     if (pvalue && PULSAR_DEFAULT_MEMORY_LIMIT < (memory_limit = atol(pvalue))) {
-        pulsar_client_configuration_set_memory_limit(ctx->conf, memory_limit);
+        pulsar_client_configuration_set_memory_limit(ctx->client_conf, memory_limit);
         plog = append_log_text(plog, "    MemoryLimit:                        ", pvalue);
     }
     
-    ctx->client = pulsar_client_create(pulsar_url, ctx->conf);
+    ctx->client = pulsar_client_create(ctx->url, ctx->client_conf);
     if (!ctx->client) {
         flb_out_pulsar_destroy(ctx);
         flb_plg_error(ins, "create pulsar client failed !");
@@ -203,7 +204,8 @@ flb_out_pulsar_ctx* flb_out_pulsar_create(const struct flb_output_instance *ins,
         return NULL;
     }
    
-    flb_plg_info(ins, config_log);
+    append_log_text(plog, "    ShowInterval:                                 ", pvalue);
+    flb_plg_info(ins, "%s", config_log);
     return ctx;
 }
 
