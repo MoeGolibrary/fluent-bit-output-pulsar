@@ -65,6 +65,18 @@ static int cb_pulsar_init(struct flb_output_instance *ins,
     return 0;
 }
 
+static void cb_stdout_flush(struct flb_event_chunk *event_chunk,
+                           struct flb_output_flush *out_flush,
+                           struct flb_input_instance *i_ins,
+                           void *out_context,
+                           struct flb_config *config)
+{
+    flb_out_pulsar_ctx *ctx = out_context;
+    flb_plg_info(ctx->ins, "=====>>>>>>> debug data:");
+    flb_pack_print(event_chunk->data, event_chunk->size);
+    FLB_OUTPUT_RETURN(FLB_OK);
+}
+
 static void cb_pulsar_flush(struct flb_event_chunk *event_chunk,
                             struct flb_output_flush *out_flush,
                             struct flb_input_instance *i_ins,
@@ -177,7 +189,8 @@ struct flb_output_plugin out_pulsar_plugin = {
     .name         = "pulsar",
     .description  = "Push events to Pulsar",
     .cb_init      = cb_pulsar_init,
-    .cb_flush     = cb_pulsar_flush,
+    // .cb_flush     = cb_pulsar_flush,
+    .cb_flush     = cb_stdout_flush,
     .cb_exit      = cb_pulsar_exit,
     .config_map   = config_map,
     .flags        = 0,
