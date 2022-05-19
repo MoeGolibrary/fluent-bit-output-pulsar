@@ -132,9 +132,9 @@ flb_out_pulsar_ctx* flb_out_pulsar_create(struct flb_output_instance *ins, struc
     
     flb_plg_info(ins, "----->>>>>> at: 09\n");
     flb_plg_info(ins, "----->>>>>> plog size1: %d", debug_n);
-    flb_plg_info(ins, "----->>>>>> plog: %s", plog);
+    flb_plg_info(ins, "----->>>>>> plog: %s", config_log);
 
-    plog = append_log_text(plog, "    Topic:                              ", pvalue);
+    plog = append_log_text(plog, "    Topic:                              ", ctx->topic);
 
     flb_plg_info(ins, "----->>>>>> plog size2: %d", debug_n);
     // CompressType
@@ -230,8 +230,8 @@ flb_out_pulsar_ctx* flb_out_pulsar_create(struct flb_output_instance *ins, struc
     }
    
     flb_plg_info(ins, "----->>>>>> at: 16\n");
-    append_log_text(plog, "    ShowInterval:                                 ", pvalue);
     flb_plg_info(ins, "%s", config_log);
+    flb_plg_info(ins, "show progress interval: %d", ctx->show_interval);
     return ctx;
 }
 
