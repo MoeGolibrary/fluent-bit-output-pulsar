@@ -21,11 +21,14 @@ bool flb_pulsar_send_msg(flb_out_pulsar_ctx *ctx, msgpack_object* obj)
         return false;
     }
 
+    flb_plg_info(ctx->ins, "=====>>>>>>> debug send: 04");
     pulsar_message_t* message = pulsar_message_create();
     pulsar_message_set_content(message, buf, len);
 
+    flb_plg_info(ctx->ins, "=====>>>>>>> debug send: 05");
     err = pulsar_producer_send(ctx->producer, message);
     pulsar_message_free(message);
+    flb_plg_info(ctx->ins, "=====>>>>>>> debug send: 06");
 
     if (err == pulsar_result_Ok) {
         ++ctx->success_number;
@@ -39,6 +42,7 @@ bool flb_pulsar_send_msg(flb_out_pulsar_ctx *ctx, msgpack_object* obj)
         flb_plg_info(ctx->ins, "publish progress: total: %d, success: %d, failed: %d, last msg: %s",
             ctx->total_number, ctx->success_number, ctx->failed_number, buf);
     }
+    flb_plg_info(ctx->ins, "=====>>>>>>> debug send: 07");
 
     return (err == pulsar_result_Ok);
 }
@@ -73,9 +77,13 @@ static void cb_pulsar_flush(struct flb_event_chunk *event_chunk,
 
     msgpack_unpacked_init(&result);
     while (MSGPACK_UNPACK_SUCCESS == msgpack_unpack_next(&result, event_chunk->data, event_chunk->size, &off)) {
+        flb_plg_info(ctx->ins, "=====>>>>>>> debug send: 01");
         flb_time_pop_from_msgpack(&tms, &result, &obj);
+        flb_plg_info(ctx->ins, "=====>>>>>>> debug send: 02");
+        msgpack_object_print(stdout, *obj);
+        flb_plg_info(ctx->ins, "=====>>>>>>> debug send: 03");
         if (!flb_pulsar_send_msg(ctx, obj)) {
-            flb_plg_error(ctx->ins, "initialize pulsar context failed.");
+            flb_plg_error(ctx->ins, "pulsar send msg failed.");
         }
     }
 
