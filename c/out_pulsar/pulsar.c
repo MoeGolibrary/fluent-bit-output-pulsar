@@ -16,8 +16,11 @@ bool flb_pulsar_send_msg(flb_out_pulsar_ctx *ctx, msgpack_object* obj)
     pulsar_result err;
 
     char buf[PULSAR_MSG_BUFFER_SIZE] = { 0 };
-    int len = msgpack_object_print_buffer(buf, PULSAR_MSG_BUFFER_SIZE, *obj);
-    if (len  < 1) {
+    // int flb_msgpack_to_json(char *json_str, size_t str_len, const msgpack_object *obj);
+    int len = flb_msgpack_to_json(buf, PULSAR_MSG_BUFFER_SIZE, obj);
+    // int len = msgpack_object_print_buffer(buf, PULSAR_MSG_BUFFER_SIZE, *obj);
+    flb_plg_info(ctx->ins, "=====>>>>>>> debug send, len: %d, buf: %s", len, buf);
+    if (len < 1) {
         return false;
     }
 
@@ -80,7 +83,7 @@ static void cb_pulsar_flush(struct flb_event_chunk *event_chunk,
         flb_plg_info(ctx->ins, "=====>>>>>>> debug send: 01");
         flb_time_pop_from_msgpack(&tms, &result, &obj);
         flb_plg_info(ctx->ins, "=====>>>>>>> debug send: 02");
-        msgpack_object_print(stdout, *obj);
+        // msgpack_object_print(stdout, *obj);
         flb_plg_info(ctx->ins, "=====>>>>>>> debug send: 03");
         if (!flb_pulsar_send_msg(ctx, obj)) {
             flb_plg_error(ctx->ins, "pulsar send msg failed.");
