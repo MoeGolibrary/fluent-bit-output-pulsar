@@ -7,16 +7,21 @@
 
 #define PULSAR_DEFAULT_MEMORY_LIMIT 1024
 
+static int debug_n = 0;
+
 char* append_log_text(char *config, const char *key, const char* value)
 {
     char *start = config;
     while (*key) {
         *config++ = *key++;
+        ++debug_n;
     }
     while (*value) {
         *config++ = *value++;
+        ++debug_n;
     }
     *config++ = '\n';
+        ++debug_n;
 
     return config;
 }
@@ -126,10 +131,12 @@ flb_out_pulsar_ctx* flb_out_pulsar_create(struct flb_output_instance *ins, struc
     }
     
     flb_plg_info(ins, "----->>>>>> at: 09\n");
+    flb_plg_info(ins, "----->>>>>> plog size1: %d", debug_n);
     flb_plg_info(ins, "----->>>>>> plog: %s", plog);
 
     plog = append_log_text(plog, "    Topic:                              ", pvalue);
 
+    flb_plg_info(ins, "----->>>>>> plog size2: %d", debug_n);
     // CompressType
     pvalue = flb_output_get_property("CompressType", ins);
     if (pvalue) {
