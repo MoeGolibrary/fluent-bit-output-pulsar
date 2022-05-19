@@ -126,11 +126,14 @@ flb_out_pulsar_ctx* flb_out_pulsar_create(struct flb_output_instance *ins, struc
     }
     
     flb_plg_info(ins, "----->>>>>> at: 09\n");
+    flb_plg_info(ins, "----->>>>>> plog: %s", plog);
+
     plog = append_log_text(plog, "    Topic:                              ", pvalue);
 
     // CompressType
     pvalue = flb_output_get_property("CompressType", ins);
     if (pvalue) {
+        flb_plg_info(ins, "----->>>>>> CompressType: %s", pvalue);
         if (0 == strcasecmp("NONE", pvalue)) {
             pulsar_producer_configuration_set_compression_type(ctx->producer_conf, pulsar_CompressionNone);
         } else if (0 == strcasecmp("LZ4", pvalue)) {
