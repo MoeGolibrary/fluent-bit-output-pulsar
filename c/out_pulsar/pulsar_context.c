@@ -36,7 +36,7 @@ flb_out_pulsar_ctx* flb_out_pulsar_create(struct flb_output_instance *ins, struc
     char config_log[1 << 12] = { 0 };
     char *plog = config_log;
 
-    printf("----->>>>>> at: 01\n");
+    flb_plg_info(ins, "----->>>>>> at: 01\n");
     flb_out_pulsar_ctx *ctx = flb_calloc(1, sizeof(flb_out_pulsar_ctx));
     if (!ctx) {
         flb_errno();
@@ -44,7 +44,7 @@ flb_out_pulsar_ctx* flb_out_pulsar_create(struct flb_output_instance *ins, struc
         return NULL;
     }
 
-    printf("----->>>>>> at: 02\n");
+    flb_plg_info(ins, "----->>>>>> at: 02\n");
     // init context
     ctx->ins = ins;
     ctx->url = NULL;
@@ -68,7 +68,7 @@ flb_out_pulsar_ctx* flb_out_pulsar_create(struct flb_output_instance *ins, struc
         return NULL;
     }
 
-    printf("----->>>>>> at: 03\n");
+    flb_plg_info(ins, "----->>>>>> at: 03\n");
     // check url and topic
     if (ctx->url == NULL || ctx->topic == NULL) {
         flb_out_pulsar_destroy(ctx);
@@ -82,7 +82,7 @@ flb_out_pulsar_ctx* flb_out_pulsar_create(struct flb_output_instance *ins, struc
     plog = append_log_text(plog, "init pulsar ok !!!", " config:");
     plog = append_log_text(plog, "    PulsarUrl:                          ", ctx->url);
 
-    printf("----->>>>>> at: 04\n");
+    flb_plg_info(ins, "----->>>>>> at: 04\n");
     /*
      * config and create pulsar client
      */
@@ -96,14 +96,14 @@ flb_out_pulsar_ctx* flb_out_pulsar_create(struct flb_output_instance *ins, struc
         ctx->token_len = 0;
     }
 
-    printf("----->>>>>> at: 05\n");
+    flb_plg_info(ins, "----->>>>>> at: 05\n");
     pvalue = flb_output_get_property("MemoryLimit", ins);
     if (pvalue && PULSAR_DEFAULT_MEMORY_LIMIT < (memory_limit = atol(pvalue))) {
         pulsar_client_configuration_set_memory_limit(ctx->client_conf, memory_limit);
         plog = append_log_text(plog, "    MemoryLimit:                        ", pvalue);
     }
     
-    printf("----->>>>>> at: 06\n");
+    flb_plg_info(ins, "----->>>>>> at: 06\n");
     ctx->client = pulsar_client_create(ctx->url, ctx->client_conf);
     if (!ctx->client) {
         flb_out_pulsar_destroy(ctx);
@@ -111,13 +111,13 @@ flb_out_pulsar_ctx* flb_out_pulsar_create(struct flb_output_instance *ins, struc
         return NULL;
     }
     
-    printf("----->>>>>> at: 07\n");
+    flb_plg_info(ins, "----->>>>>> at: 07\n");
     /*
      * config and create pulsar producer
      */
     ctx->producer_conf = pulsar_producer_configuration_create();
 
-    printf("----->>>>>> at: 08\n");
+    flb_plg_info(ins, "----->>>>>> at: 08\n");
     // ProducerName
     pvalue = flb_output_get_property("ProducerName", ins);
     if (pvalue) {
@@ -125,7 +125,7 @@ flb_out_pulsar_ctx* flb_out_pulsar_create(struct flb_output_instance *ins, struc
         plog = append_log_text(plog, "    ProducerName:                       ", pvalue);
     }
     
-    printf("----->>>>>> at: 09\n");
+    flb_plg_info(ins, "----->>>>>> at: 09\n");
     plog = append_log_text(plog, "    Topic:                              ", pvalue);
 
     // CompressType
@@ -147,7 +147,7 @@ flb_out_pulsar_ctx* flb_out_pulsar_create(struct flb_output_instance *ins, struc
         plog = append_log_text(plog, "    CompressType:                       ", pvalue);
     }
 
-    printf("----->>>>>> at: 10\n");
+    flb_plg_info(ins, "----->>>>>> at: 10\n");
     // SendTimeout
     pvalue = flb_output_get_property("SendTimeout", ins);
     if (pvalue && 0 < (send_timeout = atol(pvalue))) {
@@ -155,7 +155,7 @@ flb_out_pulsar_ctx* flb_out_pulsar_create(struct flb_output_instance *ins, struc
         plog = append_log_text(plog, "    SendTimeout:                        ", pvalue);
     }
 
-    printf("----->>>>>> at: 11\n");
+    flb_plg_info(ins, "----->>>>>> at: 11\n");
     // Batching config
     pvalue = flb_output_get_property("BatchingEnabled", ins);
     if (pvalue) {
@@ -182,7 +182,7 @@ flb_out_pulsar_ctx* flb_out_pulsar_create(struct flb_output_instance *ins, struc
         plog = append_log_text(plog, "    BatchingMaxPublishDelay:            ", pvalue);
     }
 
-    printf("----->>>>>> at: 12\n");
+    flb_plg_info(ins, "----->>>>>> at: 12\n");
     // BlockIfQueueFull
     pvalue = flb_output_get_property("BlockIfQueueFull", ins);
     if (pvalue) {
@@ -194,7 +194,7 @@ flb_out_pulsar_ctx* flb_out_pulsar_create(struct flb_output_instance *ins, struc
         plog = append_log_text(plog, "    BlockIfQueueFull:                   ", pvalue);
     }
 
-    printf("----->>>>>> at: 13\n");
+    flb_plg_info(ins, "----->>>>>> at: 13\n");
     // MaxPendingMessages
     pvalue = flb_output_get_property("MaxPendingMessages", ins);
     if (pvalue && 0 < (max_pending_msg = atol(pvalue))) {
@@ -202,7 +202,7 @@ flb_out_pulsar_ctx* flb_out_pulsar_create(struct flb_output_instance *ins, struc
         plog = append_log_text(plog, "    MaxPendingMessages:                 ", pvalue);
     }
 
-    printf("----->>>>>> at: 14\n");
+    flb_plg_info(ins, "----->>>>>> at: 14\n");
     // MaxPendingMessagesAcrossPartitions
     pvalue = flb_output_get_property("MaxPendingMessagesAcrossPartitions", ins);
     if (pvalue && 0 < (max_pending_par = atol(pvalue))) {
@@ -210,7 +210,7 @@ flb_out_pulsar_ctx* flb_out_pulsar_create(struct flb_output_instance *ins, struc
         plog = append_log_text(plog, "    MaxPendingMessagesAcrossPartitions: ", pvalue);
     }
 
-    printf("----->>>>>> at: 15\n");
+    flb_plg_info(ins, "----->>>>>> at: 15\n");
     // create pulsar producer
     err = pulsar_client_create_producer(ctx->client, ctx->topic, ctx->producer_conf, &ctx->producer);
     if (err != pulsar_result_Ok) {
@@ -219,7 +219,7 @@ flb_out_pulsar_ctx* flb_out_pulsar_create(struct flb_output_instance *ins, struc
         return NULL;
     }
    
-    printf("----->>>>>> at: 16\n");
+    flb_plg_info(ins, "----->>>>>> at: 16\n");
     append_log_text(plog, "    ShowInterval:                                 ", pvalue);
     flb_plg_info(ins, "%s", config_log);
     return ctx;
