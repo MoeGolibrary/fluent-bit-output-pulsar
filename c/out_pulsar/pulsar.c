@@ -65,6 +65,68 @@ static int cb_pulsar_init(struct flb_output_instance *ins,
     return 0;
 }
 
+static int pulsar_print_fluent_record(size_t cnt, msgpack_unpacked result)
+{
+    msgpack_object o;
+    msgpack_object *obj;
+    msgpack_object root;
+    struct flb_time tms;
+
+    root = result.data;
+    if (root.type != MSGPACK_OBJECT_ARRAY) {
+        return -1;
+    }
+
+    printf("[%d] debug =====>>>>>>> ret: %d\n", __LINE__, ret);
+
+    /* decode expected timestamp only (integer, float or ext) */
+    o = root.via.array.ptr[0];
+    if (o.type != MSGPACK_OBJECT_POSITIVE_INTEGER &&
+        o.type != MSGPACK_OBJECT_FLOAT &&
+        o.type != MSGPACK_OBJECT_EXT) {
+        return -1;
+    }
+
+    /* This is a Fluent Bit record, just do the proper unpacking/printing */
+    flb_time_pop_from_msgpack(&tms, &result, &obj);
+
+    printf("[%d] debug =====>>>>>>> \n", __LINE__);
+
+    fprintf(stdout, "[%zd] [%"PRIu32".%09lu, ", cnt,
+            (uint32_t) tms.tm.tv_sec, tms.tm.tv_nsec);
+    printf("[%d] debug =====>>>>>>> \n", __LINE__);
+    msgpack_object_print(stdout, *obj);
+    printf("[%d] debug =====>>>>>>> \n", __LINE__);
+    fprintf(stdout, "]\n");
+    printf("[%d] debug =====>>>>>>> \n", __LINE__);
+
+    return 0;
+}
+
+void flb_pulsasr_print(const char *data, size_t bytes)
+{
+    int ret;
+    msgpack_unpacked result;
+    size_t off = 0, cnt = 0;
+
+    msgpack_unpacked_init(&result);
+    while (msgpack_unpack_next(&result, data, bytes, &off) == MSGPACK_UNPACK_SUCCESS) {
+        /* Check if we are processing an internal Fluent Bit record */
+        ret = pulsar_print_fluent_record(cnt, result);
+        printf("[%d] debug =====>>>>>>> ret: %d\n", __LINE__, ret);
+        if (ret == 0) {
+            continue;
+        }
+
+        printf("[%d] debug =====>>>>>>> cnt: %d\n", __LINE__, cnt);
+        printf("[%zd] ", cnt++);
+        msgpack_object_print(stdout, result.data);
+        printf("[%d] debug =====>>>>>>> cnt: %d\n", __LINE__, cnt);
+        printf("\n");
+    }
+    msgpack_unpacked_destroy(&result);
+}
+
 static void cb_stdout_flush(struct flb_event_chunk *event_chunk,
                            struct flb_output_flush *out_flush,
                            struct flb_input_instance *i_ins,
@@ -72,11 +134,12 @@ static void cb_stdout_flush(struct flb_event_chunk *event_chunk,
                            struct flb_config *config)
 {
     flb_out_pulsar_ctx *ctx = out_context;
-    flb_plg_info(ctx->ins, "=====>>>>>>> debug data:");
-    flb_pack_print(event_chunk->data, event_chunk->size);
+    flb_plg_info(ctx->ins, "=====>>>>>>> debug data start\n");
+    flb_pulsasr_print(event_chunk->data, event_chunk->size);
+    flb_plg_info(ctx->ins, "=====>>>>>>> debug data end\n");
     FLB_OUTPUT_RETURN(FLB_OK);
 }
-
+/*
 static void cb_pulsar_flush(struct flb_event_chunk *event_chunk,
                             struct flb_output_flush *out_flush,
                             struct flb_input_instance *i_ins,
@@ -105,7 +168,7 @@ static void cb_pulsar_flush(struct flb_event_chunk *event_chunk,
     msgpack_unpacked_destroy(&result);
     FLB_OUTPUT_RETURN(FLB_OK);
 }
-
+*/
 static int cb_pulsar_exit(void *data, struct flb_config *config)
 {
     flb_out_pulsar_ctx *ctx = data;
