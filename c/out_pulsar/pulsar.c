@@ -73,7 +73,7 @@ static int pulsar_print_fluent_record(size_t cnt, msgpack_unpacked result)
     struct flb_time tms;
 
     const size_t len = (1<<22);
-    char bur[1 << 22] = { 0 };
+    char buf[1 << 22] = { 0 };
 
     root = result.data;
     printf("[%d] debug =====>>>>>>> root.type: %d\n", __LINE__, root.type);
