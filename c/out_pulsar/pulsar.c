@@ -73,14 +73,15 @@ static int pulsar_print_fluent_record(size_t cnt, msgpack_unpacked result)
     struct flb_time tms;
 
     root = result.data;
+    printf("[%d] debug =====>>>>>>> root.type: %d\n", __LINE__, root.type);
+
     if (root.type != MSGPACK_OBJECT_ARRAY) {
         return -1;
     }
 
-    printf("[%d] debug =====>>>>>>> ret: %d\n", __LINE__, ret);
-
     /* decode expected timestamp only (integer, float or ext) */
     o = root.via.array.ptr[0];
+    printf("[%d] debug =====>>>>>>> o.type: %d\n", __LINE__, o.type);
     if (o.type != MSGPACK_OBJECT_POSITIVE_INTEGER &&
         o.type != MSGPACK_OBJECT_FLOAT &&
         o.type != MSGPACK_OBJECT_EXT) {
