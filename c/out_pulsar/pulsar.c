@@ -28,14 +28,11 @@ bool flb_pulsar_send_msg2(flb_out_pulsar_ctx *ctx, msgpack_object* map, struct f
     msgpack_sbuffer_init(&mp_sbuf);
     msgpack_packer_init(&mp_pck, &mp_sbuf, msgpack_sbuffer_write);
 
-    size = map->via.map.size;
-    msgpack_pack_map(&mp_pck, size);
+    msgpack_pack_map(&mp_pck, map->via.map.size);
 
-    for (i = 0; i < map->via.map.size; i++) {
-        key = map->via.map.ptr[i].key;
-        val = map->via.map.ptr[i].val;
-        msgpack_pack_object(&mp_pck, key);
-        msgpack_pack_object(&mp_pck, val);
+    for (int i = 0; i < map->via.map.size; i++) {
+        msgpack_pack_object(&mp_pck, map->via.map.ptr[i].key);
+        msgpack_pack_object(&mp_pck, map->via.map.ptr[i].val);
     }
 
     switch (ctx->data_schema)

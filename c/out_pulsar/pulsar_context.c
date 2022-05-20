@@ -212,7 +212,7 @@ flb_out_pulsar_ctx* flb_out_pulsar_create(struct flb_output_instance *ins, struc
         "    encryption enabled:                     %s\n"
         "    crypto failure action:                  %s\n",
         ctx->show_interval,
-        ctx->data_sechma,
+        ctx->data_schema,
         ctx->url,
         ctx->token,
         pulsar_client_configuration_get_memory_limit(ctx->client_conf),
