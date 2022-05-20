@@ -72,6 +72,9 @@ static int pulsar_print_fluent_record(size_t cnt, msgpack_unpacked result)
     msgpack_object root;
     struct flb_time tms;
 
+    const size_t len = (1<<22);
+    char bur[1 << 22] = { 0 };
+
     root = result.data;
     printf("[%d] debug =====>>>>>>> root.type: %d\n", __LINE__, root.type);
 
@@ -93,13 +96,12 @@ static int pulsar_print_fluent_record(size_t cnt, msgpack_unpacked result)
 
     printf("[%d] debug =====>>>>>>> \n", __LINE__);
 
-    fprintf(stdout, "[%zd] [%"PRIu32".%09lu, ", cnt,
+    fprintf(stdout, "[%zd] [%"PRIu32".%09lu \n", cnt,
             (uint32_t) tms.tm.tv_sec, tms.tm.tv_nsec);
-    printf("[%d] debug =====>>>>>>> \n", __LINE__);
-    msgpack_object_print(stdout, *obj);
-    printf("[%d] debug =====>>>>>>> \n", __LINE__);
-    fprintf(stdout, "]\n");
-    printf("[%d] debug =====>>>>>>> \n", __LINE__);
+    // msgpack_object_print(stdout, *obj);
+    int ret = msgpack_object_print_buffer(buf, len, *obj);
+    printf("[%d] debug =====>>>>>>> %d/%d, buf: %s", __LINE__, ret, len, buf);
+    // fprintf(stdout, "]\n");
 
     return 0;
 }
