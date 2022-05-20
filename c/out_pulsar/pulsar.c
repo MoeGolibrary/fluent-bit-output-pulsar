@@ -11,7 +11,67 @@
 
 #define PULSAR_MSG_BUFFER_SIZE (1 << 23)
 
-bool flb_pulsar_send_msg(flb_out_pulsar_ctx *ctx, msgpack_object* obj)
+bool flb_pulsar_send_msg2(flb_out_pulsar_ctx *ctx, msgpack_object* map, struct flb_time *tm) {
+
+    char *out_buf;
+    size_t out_size;
+    flb_sds_t s = NULL;
+    
+    msgpack_sbuffer mp_sbuf;
+    msgpack_packer mp_pck;
+
+    flb_debug("in produce_message\n");
+    if (flb_log_check(FLB_LOG_DEBUG))
+        msgpack_object_print(stderr, *map);
+
+    /* Init temporal buffers */
+    msgpack_sbuffer_init(&mp_sbuf);
+    msgpack_packer_init(&mp_pck, &mp_sbuf, msgpack_sbuffer_write);
+
+    size = map->via.map.size;
+    msgpack_pack_map(&mp_pck, size);
+
+    for (i = 0; i < map->via.map.size; i++) {
+        key = map->via.map.ptr[i].key;
+        val = map->via.map.ptr[i].val;
+        msgpack_pack_object(&mp_pck, key);
+        msgpack_pack_object(&mp_pck, val);
+    }
+
+    switch (ctx->data_schema)
+    {
+    case FLB_PULSAR_SCHEMA_MSGP:
+        {
+            out_buf = mp_sbuf.data;
+            out_size = mp_sbuf.size;
+            break;
+        }
+    case FLB_PULSAR_SCHEMA_JSON:
+    default:
+        {
+            s = flb_msgpack_raw_to_json_sds(mp_sbuf.data, mp_sbuf.size);
+            if (!s) {
+                flb_plg_error(ctx->ins, "error encoding to JSON");
+                msgpack_sbuffer_destroy(&mp_sbuf);
+                return FLB_ERROR;
+            }
+            out_buf  = s;
+            out_size = flb_sds_len(out_buf);
+            break;
+        }
+    }
+
+    flb_plg_debug(ctx->ins, "-------> output size: %d, msg: %s", out_size, out_buf);
+
+    if (!s) {
+        flb_sds_destroy(s);
+    }
+
+    msgpack_sbuffer_destroy(&mp_sbuf);
+    return FLB_OK;
+}
+
+bool flb_pulsar_send_msg1(flb_out_pulsar_ctx *ctx, msgpack_object* obj)
 {
     pulsar_result err;
 
@@ -202,6 +262,10 @@ static struct flb_config_map config_map[] = {
         FLB_CONFIG_MAP_INT, "ShowInterval", "200", 0,
         FLB_TRUE, offsetof(flb_out_pulsar_ctx, show_interval),
         "show progress interval number."
+    },
+    {
+        FLB_CONFIG_MAP_INT, "DataSchema", "json", 0, FLB_FALSE, 0,
+        "output data schema: json, msgpack, gelf."
     },
     {
         FLB_CONFIG_MAP_INT, "MemoryLimit", (char *)NULL, 0, FLB_FALSE, 0,

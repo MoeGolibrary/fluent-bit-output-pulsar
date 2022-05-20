@@ -2,19 +2,21 @@
 
 #define DEFAULT_SHOW_INTERVAL 200
 
+#define FLB_PULSAR_SCHEMA_JSON 0
+#define FLB_PULSAR_SCHEMA_MSGP 1
+#define FLB_PULSAR_SCHEMA_GELF 2
+
 typedef struct _flb_out_pulsar_context
 {
     char* url;
     char* token;
     char* topic;
-    size_t url_len;
-    size_t token_len;
-    size_t topic_len;
 
+    uint32_t data_schema;
+    uint32_t show_interval;
     uint64_t total_number;
     uint64_t failed_number;
     uint64_t success_number;
-    unsigned int show_interval;
 
     pulsar_client_t *client;
     pulsar_producer_t *producer;

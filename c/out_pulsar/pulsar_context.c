@@ -9,23 +9,6 @@
 
 static int debug_n = 0;
 
-char* append_log_text(char *config, const char *key, const char* value)
-{
-    char *start = config;
-    while (*key) {
-        *config++ = *key++;
-        ++debug_n;
-    }
-    while (*value) {
-        *config++ = *value++;
-        ++debug_n;
-    }
-    *config++ = '\n';
-        ++debug_n;
-
-    return config;
-}
-
 flb_out_pulsar_ctx* flb_out_pulsar_create(struct flb_output_instance *ins, struct flb_config* config)
 {
     int ret;
@@ -63,6 +46,7 @@ flb_out_pulsar_ctx* flb_out_pulsar_create(struct flb_output_instance *ins, struc
     ctx->total_number = 0;
     ctx->failed_number = 0;
     ctx->success_number = 0;
+    ctx->data_schema = FLB_PULSAR_SCHEMA_JSON;
     ctx->show_interval = DEFAULT_SHOW_INTERVAL;
 
     // load config
@@ -73,7 +57,6 @@ flb_out_pulsar_ctx* flb_out_pulsar_create(struct flb_output_instance *ins, struc
         return NULL;
     }
 
-    flb_plg_info(ins, "----->>>>>> at: 03\n");
     // check url and topic
     if (ctx->url == NULL || ctx->topic == NULL) {
         flb_out_pulsar_destroy(ctx);
@@ -81,34 +64,20 @@ flb_out_pulsar_ctx* flb_out_pulsar_create(struct flb_output_instance *ins, struc
         return NULL;
     }
 
-    ctx->url_len = strlen(ctx->url);
-    ctx->topic_len = strlen(ctx->topic);
-
-    plog = append_log_text(plog, "init pulsar ok !!!", " config:");
-    plog = append_log_text(plog, "    PulsarUrl:                          ", ctx->url);
-
-    flb_plg_info(ins, "----->>>>>> at: 04\n");
     /*
      * config and create pulsar client
      */
     ctx->client_conf = pulsar_client_configuration_create();
-    if (ctx->token) {
-        ctx->token_len = strlen(ctx->token);
+    if (ctx->token && 0 < strlen(ctx->token)) {
         ctx->authentication = pulsar_authentication_token_create(ctx->token);
         pulsar_client_configuration_set_auth(ctx->client_conf, ctx->authentication);
-        plog = append_log_text(plog, "    Token:                              ", ctx->token);
-    } else {
-        ctx->token_len = 0;
     }
 
-    flb_plg_info(ins, "----->>>>>> at: 05\n");
     pvalue = flb_output_get_property("MemoryLimit", ins);
     if (pvalue && PULSAR_DEFAULT_MEMORY_LIMIT < (memory_limit = atol(pvalue))) {
         pulsar_client_configuration_set_memory_limit(ctx->client_conf, memory_limit);
-        plog = append_log_text(plog, "    MemoryLimit:                        ", pvalue);
     }
     
-    flb_plg_info(ins, "----->>>>>> at: 06\n");
     ctx->client = pulsar_client_create(ctx->url, ctx->client_conf);
     if (!ctx->client) {
         flb_out_pulsar_destroy(ctx);
@@ -116,31 +85,20 @@ flb_out_pulsar_ctx* flb_out_pulsar_create(struct flb_output_instance *ins, struc
         return NULL;
     }
     
-    flb_plg_info(ins, "----->>>>>> at: 07\n");
     /*
      * config and create pulsar producer
      */
     ctx->producer_conf = pulsar_producer_configuration_create();
 
-    flb_plg_info(ins, "----->>>>>> at: 08\n");
     // ProducerName
     pvalue = flb_output_get_property("ProducerName", ins);
     if (pvalue) {
         pulsar_producer_configuration_set_producer_name(ctx->producer_conf, pvalue);
-        plog = append_log_text(plog, "    ProducerName:                       ", pvalue);
     }
-    
-    flb_plg_info(ins, "----->>>>>> at: 09\n");
-    flb_plg_info(ins, "----->>>>>> plog size1: %d", debug_n);
-    flb_plg_info(ins, "----->>>>>> plog: %s", config_log);
 
-    plog = append_log_text(plog, "    Topic:                              ", ctx->topic);
-
-    flb_plg_info(ins, "----->>>>>> plog size2: %d", debug_n);
     // CompressType
     pvalue = flb_output_get_property("CompressType", ins);
     if (pvalue) {
-        flb_plg_info(ins, "----->>>>>> CompressType: %s", pvalue);
         if (0 == strcasecmp("NONE", pvalue)) {
             pulsar_producer_configuration_set_compression_type(ctx->producer_conf, pulsar_CompressionNone);
         } else if (0 == strcasecmp("LZ4", pvalue)) {
@@ -154,18 +112,14 @@ flb_out_pulsar_ctx* flb_out_pulsar_create(struct flb_output_instance *ins, struc
         } else {
             flb_plg_warn(ins, "unsupported pulsar compress type: %s", pvalue);
         }
-        plog = append_log_text(plog, "    CompressType:                       ", pvalue);
     }
 
-    flb_plg_info(ins, "----->>>>>> at: 10\n");
     // SendTimeout
     pvalue = flb_output_get_property("SendTimeout", ins);
     if (pvalue && 0 < (send_timeout = atol(pvalue))) {
         pulsar_producer_configuration_set_send_timeout(ctx->producer_conf, send_timeout);
-        plog = append_log_text(plog, "    SendTimeout:                        ", pvalue);
     }
 
-    flb_plg_info(ins, "----->>>>>> at: 11\n");
     // Batching config
     pvalue = flb_output_get_property("BatchingEnabled", ins);
     if (pvalue) {
@@ -174,25 +128,20 @@ flb_out_pulsar_ctx* flb_out_pulsar_create(struct flb_output_instance *ins, struc
         } else if (0 == strcasecmp("false", pvalue)) {
             pulsar_producer_configuration_set_batching_enabled(ctx->producer_conf, false);
         }
-        plog = append_log_text(plog, "    BatchingEnabled:                    ", pvalue);
     }
     pvalue = flb_output_get_property("BatchingMaxMessages", ins);
     if (pvalue && 0 < (batch_max_msg = atol(pvalue))) {
         pulsar_producer_configuration_set_batching_max_messages(ctx->producer_conf, batch_max_msg);
-        plog = append_log_text(plog, "    BatchingMaxMessages:                ", pvalue);
     }
     pvalue = flb_output_get_property("BatchingMaxBytes", ins);
     if (pvalue && 0 < (batch_max_bytes = atol(pvalue))) {
         pulsar_producer_configuration_set_batching_max_allowed_size_in_bytes(ctx->producer_conf, batch_max_bytes);
-        plog = append_log_text(plog, "    BatchingMaxBytes:                   ", pvalue);
     }
     pvalue = flb_output_get_property("BatchingMaxPublishDelay", ins);
     if (pvalue && 0 < (batch_max_delay = atol(pvalue))) {
         pulsar_producer_configuration_set_batching_max_publish_delay_ms(ctx->producer_conf, batch_max_delay);
-        plog = append_log_text(plog, "    BatchingMaxPublishDelay:            ", pvalue);
     }
 
-    flb_plg_info(ins, "----->>>>>> at: 12\n");
     // BlockIfQueueFull
     pvalue = flb_output_get_property("BlockIfQueueFull", ins);
     if (pvalue) {
@@ -201,26 +150,20 @@ flb_out_pulsar_ctx* flb_out_pulsar_create(struct flb_output_instance *ins, struc
         } else if (0 == strcasecmp("false", pvalue)) {
             pulsar_producer_configuration_set_block_if_queue_full(ctx->producer_conf, false);
         }
-        plog = append_log_text(plog, "    BlockIfQueueFull:                   ", pvalue);
     }
 
-    flb_plg_info(ins, "----->>>>>> at: 13\n");
     // MaxPendingMessages
     pvalue = flb_output_get_property("MaxPendingMessages", ins);
     if (pvalue && 0 < (max_pending_msg = atol(pvalue))) {
         pulsar_producer_configuration_set_max_pending_messages(ctx->producer_conf, max_pending_msg);
-        plog = append_log_text(plog, "    MaxPendingMessages:                 ", pvalue);
     }
 
-    flb_plg_info(ins, "----->>>>>> at: 14\n");
     // MaxPendingMessagesAcrossPartitions
     pvalue = flb_output_get_property("MaxPendingMessagesAcrossPartitions", ins);
     if (pvalue && 0 < (max_pending_par = atol(pvalue))) {
         pulsar_producer_configuration_set_max_pending_messages_across_partitions(ctx->producer_conf, max_pending_par);
-        plog = append_log_text(plog, "    MaxPendingMessagesAcrossPartitions: ", pvalue);
     }
 
-    flb_plg_info(ins, "----->>>>>> at: 15\n");
     // create pulsar producer
     err = pulsar_client_create_producer(ctx->client, ctx->topic, ctx->producer_conf, &ctx->producer);
     if (err != pulsar_result_Ok) {
@@ -228,10 +171,69 @@ flb_out_pulsar_ctx* flb_out_pulsar_create(struct flb_output_instance *ins, struc
         flb_plg_error(ins, "Failed to create pulsar producer: %s\n", pulsar_result_str(err));
         return NULL;
     }
-   
-    flb_plg_info(ins, "----->>>>>> at: 16\n");
-    flb_plg_info(ins, "%s", config_log);
-    flb_plg_info(ins, "show progress interval: %d", ctx->show_interval);
+    
+    /**
+     * parse data schema
+     */
+    pvalue = flb_output_get_property("DataSchema", ins);
+    if (pvalue) {
+        if (0 == strcasecmp("json", pvalue)) {
+            ctx->data_schema = FLB_PULSAR_SCHEMA_JSON;
+        } else if (0 == strcasecmp("msgpack", pvalue)) {
+            ctx->data_schema = FLB_PULSAR_SCHEMA_MSGP;
+        } else if (0 == strcasecmp("gelf", pvalue)) {
+            ctx->data_schema = FLB_PULSAR_SCHEMA_GELF;
+        } else {
+            flb_plg_warn(ins, "unsupported output schema type: %s", pvalue);
+        }
+    }
+
+    flb_plg_info(ins, "fluent-bit output plugin for pulsar config:\n"
+        "    show progress interval:                 %s\n"
+        "    output data schema:                     %s\n"
+        "    pulsar url:                             %s\n"
+        "    auth token:                             %s\n"
+        "    memory limit:                           %s\n"
+        "    producer name:                          %s\n"
+        "    topic:                                  %s\n"
+        "    send timeout:                           %s\n"
+        "    compress type:                          %s\n"
+        "    initial sequence id:                    %s\n"
+        "    max pending messages:                   %s\n"
+        "    max pending messages across partitions: %s\n"
+        "    partitions routing mode:                %s\n"
+        "    hashing schema:                         %s\n"
+        "    lazy start partitioned producers:       %s\n"
+        "    block if queue full:                    %s\n"
+        "    batching enabled:                       %s\n"
+        "    batching max messages:                  %s\n"
+        "    batching max bytes:                     %s\n"
+        "    batching max publish delay:             %s\n"
+        "    encryption enabled:                     %s\n"
+        "    crypto failure action:                  %s\n",
+        ctx->show_interval,
+        ctx->data_sechma,
+        ctx->url,
+        ctx->token,
+        pulsar_client_configuration_get_memory_limit(ctx->client_conf),
+        pulsar_producer_configuration_get_producer_name(ctx->producer_conf),
+        ctx->topic,
+        pulsar_producer_configuration_get_send_timeout(ctx->producer_conf),
+        pulsar_producer_configuration_get_compression_type(ctx->producer_conf),
+        pulsar_producer_configuration_get_initial_sequence_id(ctx->producer_conf),
+        pulsar_producer_configuration_get_max_pending_messages(ctx->producer_conf),
+        pulsar_producer_configuration_get_max_pending_messages_across_partitions(ctx->producer_conf),
+        pulsar_producer_configuration_get_partitions_routing_mode(ctx->producer_conf),
+        pulsar_producer_configuration_get_hashing_scheme(ctx->producer_conf),
+        pulsar_producer_configuration_get_lazy_start_partitioned_producers(ctx->producer_conf),
+        pulsar_producer_configuration_get_block_if_queue_full(ctx->producer_conf),
+        pulsar_producer_configuration_get_batching_enabled(ctx->producer_conf),
+        pulsar_producer_configuration_get_batching_max_messages(ctx->producer_conf),
+        pulsar_producer_configuration_get_batching_max_allowed_size_in_bytes(ctx->producer_conf),
+        pulsar_producer_configuration_get_batching_max_publish_delay_ms(ctx->producer_conf),
+        pulsar_producer_is_encryption_enabled(ctx->producer_conf),
+        pulsar_producer_configuration_get_crypto_failure_action(ctx->producer_conf));
+
     return ctx;
 }
 
