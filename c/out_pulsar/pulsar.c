@@ -24,13 +24,13 @@ struct output_statistics_ctx stats_ctx = {
 bool pulsar_send_msg(flb_out_pulsar_ctx *ctx, const char* data, size_t len) {
     pulsar_message_t* message = pulsar_message_create();
     pulsar_message_set_content(message, data, len);
-    pulsar_result ret = pulsar_producer_send(producer, message);
+    pulsar_result ret = pulsar_producer_send(ctx->producer, message);
     pulsar_message_free(message);
 
     if (pulsar_result_Ok == ret) {
         return true;
     } else {
-        flb_plg_info(ctx->ins, "pulsar publish message failed: %s, msg: %s", pulsar_result_str(err), data);
+        flb_plg_info(ctx->ins, "pulsar publish message failed: %s, msg: %s", pulsar_result_str(ret), data);
         return false;
     }
 }
@@ -83,7 +83,7 @@ bool flb_pulsar_output_msg(flb_out_pulsar_ctx *ctx, msgpack_object* map, struct 
         }
     }
 
-    if (pulsar_send_msg(ctx, out_size, out_buf)) {
+    if (pulsar_send_msg(ctx, out_buf, out_size)) {
         ++stats_ctx.success;
         if (0 == stats_ctx.success % ctx->show_interval) {
             flb_plg_info(ctx->ins, "output progress, total: %ull, success: %ull, failed: %ull, last msg: %s",
