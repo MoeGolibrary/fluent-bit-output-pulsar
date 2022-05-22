@@ -342,7 +342,8 @@ flb_out_pulsar_ctx* flb_out_pulsar_create(struct flb_output_instance *ins, struc
         "    batching max bytes:                     %u\n"
         "    batching max publish delay:             %u\n"
         "    encryption enabled:                     %s\n"
-        "    crypto failure action:                  %s\n",
+        // "    crypto failure action:                  %s\n"
+        ,
         get_config_show_interval(ctx),
         get_config_output_schema(ctx),
         get_pulsar_url(ctx),
@@ -364,7 +365,8 @@ flb_out_pulsar_ctx* flb_out_pulsar_create(struct flb_output_instance *ins, struc
         get_producer_batching_max_allowed_size_in_bytes(ctx),
         get_producer_batching_max_publish_delay_ms(ctx),
         get_producer_encryption_enabled(ctx),
-        get_producer_crypto_failure_action(ctx));
+        // get_producer_crypto_failure_action(ctx)
+        );
 
     return ctx;
 }
