@@ -1,4 +1,3 @@
-
 #include <fluent-bit/flb_output_plugin.h>
 #include <fluent-bit/flb_time.h>
 #include <fluent-bit/flb_pack.h>
@@ -9,7 +8,34 @@
 
 #include "pulsar_context.h"
 
-bool flb_pulsar_send_msg2(flb_out_pulsar_ctx *ctx, msgpack_object* map, struct flb_time *tm) {
+struct output_statistics_ctx
+{
+    uint64_t total;
+    uint64_t success;
+    uint64_t failed;
+};
+
+struct output_statistics_ctx stats_ctx = {
+    .total   = 0,
+    .success = 0,
+    .failed  = 0
+};
+
+bool pulsar_send_msg(flb_out_pulsar_ctx *ctx, const char* data, size_t len) {
+    pulsar_message_t* message = pulsar_message_create();
+    pulsar_message_set_content(message, data, len);
+    pulsar_result ret = pulsar_producer_send(producer, message);
+    pulsar_message_free(message);
+
+    if (pulsar_result_Ok == ret) {
+        return true;
+    } else {
+        flb_plg_info(ctx->ins, "pulsar publish message failed: %s, msg: %s", pulsar_result_str(err), data);
+        return false;
+    }
+}
+
+bool flb_pulsar_output_msg(flb_out_pulsar_ctx *ctx, msgpack_object* map, struct flb_time *tm) {
     char *out_buf;
     size_t out_size;
     
@@ -21,7 +47,7 @@ bool flb_pulsar_send_msg2(flb_out_pulsar_ctx *ctx, msgpack_object* map, struct f
     if (flb_log_check(FLB_LOG_DEBUG))
         msgpack_object_print(stderr, *map);
 
-    /* Init temporal buffers */
+    // Init temporal buffers
     msgpack_sbuffer_init(&mp_sbuf);
     msgpack_packer_init(&mp_pck, &mp_sbuf, msgpack_sbuffer_write);
 
@@ -32,6 +58,7 @@ bool flb_pulsar_send_msg2(flb_out_pulsar_ctx *ctx, msgpack_object* map, struct f
         msgpack_pack_object(&mp_pck, map->via.map.ptr[i].val);
     }
 
+    // Parse to schema
     switch (ctx->data_schema)
     {
     case FLB_PULSAR_SCHEMA_MSGP:
@@ -47,6 +74,7 @@ bool flb_pulsar_send_msg2(flb_out_pulsar_ctx *ctx, msgpack_object* map, struct f
             if (!s) {
                 flb_plg_error(ctx->ins, "error encoding to JSON");
                 msgpack_sbuffer_destroy(&mp_sbuf);
+                ++stats_ctx.failed;
                 return false;
             }
             out_buf  = s;
@@ -55,8 +83,16 @@ bool flb_pulsar_send_msg2(flb_out_pulsar_ctx *ctx, msgpack_object* map, struct f
         }
     }
 
-    flb_plg_info(ctx->ins, "-------> output size: %d, msg: %s", out_size, out_buf);
-
+    if (pulsar_send_msg(ctx, out_size, out_buf)) {
+        ++stats_ctx.success;
+        if (0 == stats_ctx.success % ctx->show_interval) {
+            flb_plg_info(ctx->ins, "output progress, total: %ull, success: %ull, failed: %ull, last msg: %s",
+                stats_ctx.total, stats_ctx.success, stats_ctx.failed, out_buf);
+        }
+    } else {
+        ++stats_ctx.failed;
+    }
+    
     if (s) {
         flb_sds_destroy(s);
     }
@@ -94,10 +130,9 @@ static void cb_pulsar_flush(struct flb_event_chunk *event_chunk,
 
     msgpack_unpacked_init(&result);
     while (MSGPACK_UNPACK_SUCCESS == msgpack_unpack_next(&result, event_chunk->data, event_chunk->size, &off)) {
+        ++stats_ctx.total;
         flb_time_pop_from_msgpack(&tms, &result, &obj);
-        if (!flb_pulsar_send_msg2(ctx, obj, &tms)) {
-            flb_plg_error(ctx->ins, "pulsar send msg failed.");
-        }
+        flb_pulsar_output_msg(ctx, obj, &tms);
     }
 
     msgpack_unpacked_destroy(&result);
