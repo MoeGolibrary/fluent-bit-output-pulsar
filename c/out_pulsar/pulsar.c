@@ -9,16 +9,13 @@
 
 #include "pulsar_context.h"
 
-#define PULSAR_MSG_BUFFER_SIZE (1 << 23)
-
 bool flb_pulsar_send_msg2(flb_out_pulsar_ctx *ctx, msgpack_object* map, struct flb_time *tm) {
-
     char *out_buf;
     size_t out_size;
-    flb_sds_t s = NULL;
     
     msgpack_sbuffer mp_sbuf;
     msgpack_packer mp_pck;
+    flb_sds_t s = NULL;
 
     flb_debug("in produce_message\n");
     if (flb_log_check(FLB_LOG_DEBUG))
@@ -50,7 +47,7 @@ bool flb_pulsar_send_msg2(flb_out_pulsar_ctx *ctx, msgpack_object* map, struct f
             if (!s) {
                 flb_plg_error(ctx->ins, "error encoding to JSON");
                 msgpack_sbuffer_destroy(&mp_sbuf);
-                return FLB_ERROR;
+                return false;
             }
             out_buf  = s;
             out_size = flb_sds_len(out_buf);
@@ -58,7 +55,7 @@ bool flb_pulsar_send_msg2(flb_out_pulsar_ctx *ctx, msgpack_object* map, struct f
         }
     }
 
-    flb_plg_debug(ctx->ins, "-------> output size: %d, msg: %s", out_size, out_buf);
+    flb_plg_info(ctx->ins, "-------> output size: %d, msg: %s", out_size, out_buf);
 
     if (!s) {
         flb_sds_destroy(s);
@@ -66,45 +63,6 @@ bool flb_pulsar_send_msg2(flb_out_pulsar_ctx *ctx, msgpack_object* map, struct f
 
     msgpack_sbuffer_destroy(&mp_sbuf);
     return true;
-}
-
-bool flb_pulsar_send_msg1(flb_out_pulsar_ctx *ctx, msgpack_object* obj)
-{
-    pulsar_result err;
-
-    char buf[PULSAR_MSG_BUFFER_SIZE] = { 0 };
-    // int flb_msgpack_to_json(char *json_str, size_t str_len, const msgpack_object *obj);
-    int len = flb_msgpack_to_json(buf, PULSAR_MSG_BUFFER_SIZE, obj);
-    // int len = msgpack_object_print_buffer(buf, PULSAR_MSG_BUFFER_SIZE, *obj);
-    flb_plg_info(ctx->ins, "=====>>>>>>> debug send, len: %d, buf: %s", len, buf);
-    if (len < 1) {
-        return false;
-    }
-
-    flb_plg_info(ctx->ins, "=====>>>>>>> debug send: 04");
-    pulsar_message_t* message = pulsar_message_create();
-    pulsar_message_set_content(message, buf, len);
-
-    flb_plg_info(ctx->ins, "=====>>>>>>> debug send: 05");
-    err = pulsar_producer_send(ctx->producer, message);
-    pulsar_message_free(message);
-    flb_plg_info(ctx->ins, "=====>>>>>>> debug send: 06");
-
-    if (err == pulsar_result_Ok) {
-        ++ctx->success_number;
-    } else {
-        ++ctx->failed_number;
-        flb_plg_error(ctx->ins, "Failed to publish message: %s", pulsar_result_str(err));
-    }
-    
-    ++ctx->total_number;
-    if (0 == ctx->total_number % ctx->show_interval) {
-        flb_plg_info(ctx->ins, "publish progress: total: %d, success: %d, failed: %d, last msg: %s",
-            ctx->total_number, ctx->success_number, ctx->failed_number, buf);
-    }
-    flb_plg_info(ctx->ins, "=====>>>>>>> debug send: 07");
-
-    return (err == pulsar_result_Ok);
 }
 
 static int cb_pulsar_init(struct flb_output_instance *ins,
@@ -122,26 +80,12 @@ static int cb_pulsar_init(struct flb_output_instance *ins,
     return 0;
 }
 
-static void cb_stdout_flush(struct flb_event_chunk *event_chunk,
-                           struct flb_output_flush *out_flush,
-                           struct flb_input_instance *i_ins,
-                           void *out_context,
-                           struct flb_config *config)
-{
-    flb_out_pulsar_ctx *ctx = out_context;
-    flb_plg_info(ctx->ins, "=====>>>>>>> debug data start\n");
-    flb_pack_print(event_chunk->data, event_chunk->size);
-    flb_plg_info(ctx->ins, "=====>>>>>>> debug data end\n");
-    FLB_OUTPUT_RETURN(FLB_OK);
-}
-
 static void cb_pulsar_flush(struct flb_event_chunk *event_chunk,
                             struct flb_output_flush *out_flush,
                             struct flb_input_instance *i_ins,
                             void *out_context,
                             struct flb_config *config)
 {
-    int ret;
     size_t off = 0;
     struct flb_time tms;
     msgpack_object *obj;
@@ -150,9 +94,7 @@ static void cb_pulsar_flush(struct flb_event_chunk *event_chunk,
 
     msgpack_unpacked_init(&result);
     while (MSGPACK_UNPACK_SUCCESS == msgpack_unpack_next(&result, event_chunk->data, event_chunk->size, &off)) {
-        flb_plg_info(ctx->ins, "=====>>>>>>> debug send: 01");
         flb_time_pop_from_msgpack(&tms, &result, &obj);
-        flb_plg_info(ctx->ins, "=====>>>>>>> debug send: 02");
         if (!flb_pulsar_send_msg2(ctx, obj, &tms)) {
             flb_plg_error(ctx->ins, "pulsar send msg failed.");
         }
