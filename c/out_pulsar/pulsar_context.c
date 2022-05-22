@@ -1,4 +1,3 @@
-
 #include <fluent-bit/flb_output_plugin.h>
 
 #include <pulsar/c/authentication.h>
@@ -6,8 +5,7 @@
 #include "pulsar_context.h"
 
 #define PULSAR_DEFAULT_MEMORY_LIMIT 1024
-
-static int debug_n = 0;
+#define PULSAR_AUTH_TOKEN_MASK_LEN  16
 
 const uint32_t get_config_show_interval(flb_out_pulsar_ctx *ctx) {
     return ctx->show_interval;
@@ -32,17 +30,17 @@ void mask_memory(char* buf, size_t size, const char *src, size_t len, size_t n) 
     memcpy(buf + size - n, src + (len - n), n);
 }
 static const char* get_pulsar_auth_token(flb_out_pulsar_ctx *ctx) {
-    static char text[17] = { 0 };
+    static char text[PULSAR_AUTH_TOKEN_MASK_LEN + 1] = { 0 };
     if (ctx->token) {
         size_t len = strlen(ctx->token);
         if (len  < 4) {
-            memset(text, '*', 16);
+            memset(text, '*', PULSAR_AUTH_TOKEN_MASK_LEN);
         } else if (len < 8) {
-            mask_memory(text, 16, ctx->token, len, 2);
+            mask_memory(text, PULSAR_AUTH_TOKEN_MASK_LEN, ctx->token, len, 2);
         } else if (len < 16) {
-            mask_memory(text, 16, ctx->token, len, 4);
+            mask_memory(text, PULSAR_AUTH_TOKEN_MASK_LEN, ctx->token, len, 4);
         } else {
-            mask_memory(text, 16, ctx->token, len, 6);
+            mask_memory(text, PULSAR_AUTH_TOKEN_MASK_LEN, ctx->token, len, 6);
         }
     }
     

@@ -4,7 +4,6 @@
 #include <fluent-bit/flb_utils.h>
 
 #include <pulsar/c/client.h>
-#include <stdio.h>
 
 #include "pulsar_context.h"
 
@@ -83,7 +82,8 @@ bool flb_pulsar_output_msg(flb_out_pulsar_ctx *ctx, msgpack_object* map, struct 
         }
     }
 
-    if (pulsar_send_msg(ctx, out_buf, out_size)) {
+    bool ret = pulsar_send_msg(ctx, out_buf, out_size);
+    if (ret) {
         ++stats_ctx.success;
         if (0 == stats_ctx.success % ctx->show_interval) {
             flb_plg_info(ctx->ins, "output progress, total: %"PRIu64", success: %"PRIu64", failed: %"PRIu64", last msg: %s",
@@ -98,11 +98,10 @@ bool flb_pulsar_output_msg(flb_out_pulsar_ctx *ctx, msgpack_object* map, struct 
     }
 
     msgpack_sbuffer_destroy(&mp_sbuf);
-    return true;
+    return ret;
 }
 
-static int cb_pulsar_init(struct flb_output_instance *ins,
-                          struct flb_config *config, void *data)
+static int cb_pulsar_init(struct flb_output_instance *ins, struct flb_config *config, void *data)
 {
     // create output context
     flb_out_pulsar_ctx *ctx = flb_out_pulsar_create(ins, config);
@@ -227,7 +226,6 @@ struct flb_output_plugin out_pulsar_plugin = {
     .description  = "Push events to Pulsar",
     .cb_init      = cb_pulsar_init,
     .cb_flush     = cb_pulsar_flush,
-    // .cb_flush     = cb_stdout_flush,
     .cb_exit      = cb_pulsar_exit,
     .config_map   = config_map,
     .flags        = 0,
