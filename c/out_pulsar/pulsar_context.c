@@ -88,7 +88,7 @@ const char* get_producer_partitions_routing_mode(flb_out_pulsar_ctx *ctx) {
     switch (pulsar_producer_configuration_get_partitions_routing_mode(ctx->producer_conf))
     {
     case pulsar_UseSinglePartition:
-        return "Single";
+        return "UseSingle";
     case pulsar_RoundRobinDistribution:
         return "RoundRobin";
     default:
@@ -248,6 +248,20 @@ flb_out_pulsar_ctx* flb_out_pulsar_create(struct flb_output_instance *ins, struc
     pvalue = flb_output_get_property("SendTimeout", ins);
     if (pvalue && 0 < (send_timeout = atol(pvalue))) {
         pulsar_producer_configuration_set_send_timeout(ctx->producer_conf, send_timeout);
+    }
+
+    // MessageRoutingMode
+    pvalue = flb_output_get_property("MessageRoutingMode", ins);
+    if (pvalue) {
+        if (0 == strcasecmp("UseSingle", pvalue)) {
+            pulsar_producer_configuration_set_partitions_routing_mode(ctx->producer_conf, pulsar_UseSinglePartition);
+        } else if (0 == strcasecmp("RoundRobin", pvalue)) {
+            pulsar_producer_configuration_set_partitions_routing_mode(ctx->producer_conf, pulsar_RoundRobinDistribution);
+        } else if (0 == strcasecmp("Custom", pvalue)) {
+            pulsar_producer_configuration_set_partitions_routing_mode(ctx->producer_conf, pulsar_CustomPartition);
+        } else {
+            flb_plg_warn(ins, "unsupported pulsar message routing mode: %s", pvalue);
+        }
     }
 
     // Batching config

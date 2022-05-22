@@ -186,6 +186,10 @@ static struct flb_config_map config_map[] = {
         "pulsar producer compress type."
     },
     {
+        FLB_CONFIG_MAP_STR, "MessageRoutingMode", (char *)NULL, 0, FLB_FALSE, 0,
+        "pulsar producer message routing mode."
+    },
+    {
         FLB_CONFIG_MAP_INT, "SendTimeout", (char *)NULL, 0, FLB_FALSE, 0,
         "pulsar producer send msg timeout in milliseconds."
     },
