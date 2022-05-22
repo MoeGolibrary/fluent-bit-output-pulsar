@@ -57,7 +57,7 @@ bool flb_pulsar_send_msg2(flb_out_pulsar_ctx *ctx, msgpack_object* map, struct f
 
     flb_plg_info(ctx->ins, "-------> output size: %d, msg: %s", out_size, out_buf);
 
-    if (!s) {
+    if (s) {
         flb_sds_destroy(s);
     }
 
