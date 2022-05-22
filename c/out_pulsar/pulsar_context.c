@@ -31,7 +31,7 @@ inline void mask_memory(char* buf, size_t size, const char *src, size_t len, siz
     memset(buf + n, '*', size - (n << 1));
     memcpy(buf + size - n, src + (len - n), n);
 }
-inline const char* get_pulsar_auth_token(flb_out_pulsar_ctx *ctx) {
+static const char* get_pulsar_auth_token(flb_out_pulsar_ctx *ctx) {
     static char text[17] = { 0 };
     if (ctx->token) {
         size_t len = strlen(ctx->token);
@@ -67,7 +67,7 @@ inline const char* get_producer_compression_type(flb_out_pulsar_ctx *ctx) {
         return "NONE";
     case pulsar_CompressionLZ4:
         return "LZ4";
-    case pulsar_CompressionZLIB:
+    case pulsar_CompressionZLib:
         return "ZLIB";
     case pulsar_CompressionZSTD:
         return "ZSTD";
