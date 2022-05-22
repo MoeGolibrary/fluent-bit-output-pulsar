@@ -9,6 +9,140 @@
 
 static int debug_n = 0;
 
+inline const uint32_t get_config_show_interval(flb_out_pulsar_ctx *ctx) {
+    return ctx->show_interval;
+}
+inline const char* get_config_output_schema(flb_out_pulsar_ctx *ctx) {
+    switch (ctx->data_schema)
+    {
+    case FLB_PULSAR_SCHEMA_MSGP:
+        return "MSGPACK";
+    case FLB_PULSAR_SCHEMA_GELF:
+        return "GELF";
+    default:
+        return "JSON";
+    }
+}
+inline const char* get_pulsar_url(flb_out_pulsar_ctx *ctx) {
+    return ctx->url;
+}
+inline void mask_memory(char* buf, size_t size, const char *src, size_t len, size_t n) {
+    memcpy(buf, src, n);
+    memset(buf + n, '*', size - (n << 1));
+    memcpy(buf + size - n, src + (len - n), n);
+}
+inline const char* get_pulsar_auth_token(flb_out_pulsar_ctx *ctx) {
+    static char text[17] = { 0 };
+    if (ctx->token) {
+        size_t len = strlen(ctx->token);
+        if (len  < 4) {
+            memset(text, '*', 16);
+        } else if (len < 8) {
+            mask_memory(text, 16, ctx->token, len, 2);
+        } else if (len < 16) {
+            mask_memory(text, 16, ctx->token, len, 4);
+        } else {
+            mask_memory(text, 16, ctx->token, len, 6);
+        }
+    }
+    
+    return text;
+}
+inline uint64_t get_pulsar_memory_limit(flb_out_pulsar_ctx *ctx) {
+    return pulsar_client_configuration_get_memory_limit(ctx->client_conf);
+}
+inline const char* get_producer_name(flb_out_pulsar_ctx *ctx) {
+    return pulsar_producer_configuration_get_producer_name(ctx->producer_conf);
+}
+inline const char* get_producer_topic(flb_out_pulsar_ctx *ctx) {
+    return ctx->topic;
+}      
+inline int get_producer_send_timeout(flb_out_pulsar_ctx *ctx) {
+    return pulsar_producer_configuration_get_send_timeout(ctx->producer_conf);
+}
+inline const char* get_producer_compression_type(flb_out_pulsar_ctx *ctx) {
+    switch (pulsar_producer_configuration_get_compression_type(ctx->producer_conf))
+    {
+    case pulsar_CompressionNone:
+        return "NONE";
+    case pulsar_CompressionLZ4:
+        return "LZ4";
+    case pulsar_CompressionZLIB:
+        return "ZLIB";
+    case pulsar_CompressionZSTD:
+        return "ZSTD";
+    case pulsar_CompressionSNAPPY:
+        return "SNAPPY";
+    default:
+        return "";
+    }
+}
+inline int64_t get_producer_initial_sequence_id(flb_out_pulsar_ctx *ctx) {
+    return pulsar_producer_configuration_get_initial_sequence_id(ctx->producer_conf);
+}
+inline int get_producer_max_pending_messages(flb_out_pulsar_ctx *ctx) {
+    return pulsar_producer_configuration_get_max_pending_messages(ctx->producer_conf);
+}
+inline int get_producer_max_pending_messages_across_partitions(flb_out_pulsar_ctx *ctx) {
+    return pulsar_producer_configuration_get_max_pending_messages_across_partitions(ctx->producer_conf);
+}
+inline const char* get_producer_partitions_routing_mode(flb_out_pulsar_ctx *ctx) {
+    switch (pulsar_producer_configuration_get_partitions_routing_mode(ctx->producer_conf))
+    {
+    case pulsar_UseSinglePartition:
+        return "Single";
+    case pulsar_RoundRobinDistribution:
+        return "RoundRobin";
+    default:
+        return "Custom";
+    }
+}
+inline const char* get_producer_hashing_scheme(flb_out_pulsar_ctx *ctx) {
+    switch (pulsar_producer_configuration_get_hashing_scheme(ctx->producer_conf))
+    {
+    case pulsar_JavaStringHash:
+        return "JavaStringHash";
+    case pulsar_Murmur3_32Hash:
+        return "Murmur3_32Hash";
+    case pulsar_BoostHash:
+        return "BoostHash";
+    default:
+        return "";
+    }
+}
+inline int get_producer_lazy_start_partitioned_producers(flb_out_pulsar_ctx *ctx) {
+    return pulsar_producer_configuration_get_lazy_start_partitioned_producers(ctx->producer_conf);
+}
+inline const char* get_producer_block_if_queue_full(flb_out_pulsar_ctx *ctx) {
+    return pulsar_producer_configuration_get_block_if_queue_full(ctx->producer_conf) ? "true" : "false";
+}
+inline const char* get_producer_batching_enabled(flb_out_pulsar_ctx *ctx) {
+    return pulsar_producer_configuration_get_batching_enabled(ctx->producer_conf) ? "true" : "false";
+}
+inline uint32_t get_producer_batching_max_messages(flb_out_pulsar_ctx *ctx) {
+    return pulsar_producer_configuration_get_batching_max_messages(ctx->producer_conf);
+}
+inline uint32_t get_producer_batching_max_allowed_size_in_bytes(flb_out_pulsar_ctx *ctx) {
+    return pulsar_producer_configuration_get_batching_max_allowed_size_in_bytes(ctx->producer_conf);
+}
+inline uint32_t get_producer_batching_max_publish_delay_ms(flb_out_pulsar_ctx *ctx) {
+    return pulsar_producer_configuration_get_batching_max_publish_delay_ms(ctx->producer_conf);
+}
+inline const char* get_producer_encryption_enabled(flb_out_pulsar_ctx *ctx) {
+    return pulsar_producer_is_encryption_enabled(ctx->producer_conf) ? "true" : "false";
+}
+inline const char* get_producer_crypto_failure_action(flb_out_pulsar_ctx *ctx) {
+    switch (pulsar_producer_configuration_get_crypto_failure_action(ctx->producer_conf))
+    {
+    case pulsar_ProducerSend:
+        return "ProducerSend";
+    case pulsar_ProducerFail:
+        return "ProducerFail";
+    default:
+        return "";
+    }
+}
+
 flb_out_pulsar_ctx* flb_out_pulsar_create(struct flb_output_instance *ins, struct flb_config* config)
 {
     int ret;
@@ -189,50 +323,50 @@ flb_out_pulsar_ctx* flb_out_pulsar_create(struct flb_output_instance *ins, struc
     }
 
     flb_plg_info(ins, "fluent-bit output plugin for pulsar config:\n"
-        "    show progress interval:                 %s\n"
+        "    show progress interval:                 %u\n"
         "    output data schema:                     %s\n"
         "    pulsar url:                             %s\n"
         "    auth token:                             %s\n"
-        "    memory limit:                           %s\n"
+        "    memory limit:                           %"PRIu64"\n"
         "    producer name:                          %s\n"
         "    topic:                                  %s\n"
-        "    send timeout:                           %s\n"
+        "    send timeout:                           %d\n"
         "    compress type:                          %s\n"
-        "    initial sequence id:                    %s\n"
-        "    max pending messages:                   %s\n"
-        "    max pending messages across partitions: %s\n"
+        "    initial sequence id:                    %"PRId64"\n"
+        "    max pending messages:                   %d\n"
+        "    max pending messages across partitions: %d\n"
         "    partitions routing mode:                %s\n"
         "    hashing schema:                         %s\n"
-        "    lazy start partitioned producers:       %s\n"
+        "    lazy start partitioned producers:       %d\n"
         "    block if queue full:                    %s\n"
         "    batching enabled:                       %s\n"
-        "    batching max messages:                  %s\n"
-        "    batching max bytes:                     %s\n"
-        "    batching max publish delay:             %s\n"
+        "    batching max messages:                  %u\n"
+        "    batching max bytes:                     %u\n"
+        "    batching max publish delay:             %u\n"
         "    encryption enabled:                     %s\n"
         "    crypto failure action:                  %s\n",
-        ctx->show_interval,
-        ctx->data_schema,
-        ctx->url,
-        ctx->token,
-        pulsar_client_configuration_get_memory_limit(ctx->client_conf),
-        pulsar_producer_configuration_get_producer_name(ctx->producer_conf),
-        ctx->topic,
-        pulsar_producer_configuration_get_send_timeout(ctx->producer_conf),
-        pulsar_producer_configuration_get_compression_type(ctx->producer_conf),
-        pulsar_producer_configuration_get_initial_sequence_id(ctx->producer_conf),
-        pulsar_producer_configuration_get_max_pending_messages(ctx->producer_conf),
-        pulsar_producer_configuration_get_max_pending_messages_across_partitions(ctx->producer_conf),
-        pulsar_producer_configuration_get_partitions_routing_mode(ctx->producer_conf),
-        pulsar_producer_configuration_get_hashing_scheme(ctx->producer_conf),
-        pulsar_producer_configuration_get_lazy_start_partitioned_producers(ctx->producer_conf),
-        pulsar_producer_configuration_get_block_if_queue_full(ctx->producer_conf),
-        pulsar_producer_configuration_get_batching_enabled(ctx->producer_conf),
-        pulsar_producer_configuration_get_batching_max_messages(ctx->producer_conf),
-        pulsar_producer_configuration_get_batching_max_allowed_size_in_bytes(ctx->producer_conf),
-        pulsar_producer_configuration_get_batching_max_publish_delay_ms(ctx->producer_conf),
-        pulsar_producer_is_encryption_enabled(ctx->producer_conf),
-        pulsar_producer_configuration_get_crypto_failure_action(ctx->producer_conf));
+        get_config_show_interval(ctx),
+        get_config_output_schema(ctx),
+        get_pulsar_url(ctx),
+        get_pulsar_auth_token(ctx),
+        get_pulsar_memory_limit(ctx),
+        get_producer_name(ctx),
+        get_producer_topic(ctx),
+        get_producer_send_timeout(ctx),
+        get_producer_compression_type(ctx),
+        get_producer_initial_sequence_id(ctx),
+        get_producer_max_pending_messages(ctx),
+        get_producer_max_pending_messages_across_partitions(ctx),
+        get_producer_partitions_routing_mode(ctx),
+        get_producer_hashing_scheme(ctx),
+        get_producer_lazy_start_partitioned_producers(ctx),
+        get_producer_block_if_queue_full(ctx),
+        get_producer_batching_enabled(ctx),
+        get_producer_batching_max_messages(ctx),
+        get_producer_batching_max_allowed_size_in_bytes(ctx),
+        get_producer_batching_max_publish_delay_ms(ctx),
+        get_producer_encryption_enabled(ctx),
+        get_producer_crypto_failure_action(ctx));
 
     return ctx;
 }

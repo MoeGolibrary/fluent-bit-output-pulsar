@@ -12,8 +12,8 @@ typedef struct _flb_out_pulsar_context
     char* token;
     char* topic;
 
-    uint32_t data_schema;
     uint32_t show_interval;
+    uint32_t data_schema;
     uint64_t total_number;
     uint64_t failed_number;
     uint64_t success_number;

@@ -199,7 +199,7 @@ static void cb_stdout_flush(struct flb_event_chunk *event_chunk,
     flb_plg_info(ctx->ins, "=====>>>>>>> debug data end\n");
     FLB_OUTPUT_RETURN(FLB_OK);
 }
-/*
+
 static void cb_pulsar_flush(struct flb_event_chunk *event_chunk,
                             struct flb_output_flush *out_flush,
                             struct flb_input_instance *i_ins,
@@ -218,9 +218,7 @@ static void cb_pulsar_flush(struct flb_event_chunk *event_chunk,
         flb_plg_info(ctx->ins, "=====>>>>>>> debug send: 01");
         flb_time_pop_from_msgpack(&tms, &result, &obj);
         flb_plg_info(ctx->ins, "=====>>>>>>> debug send: 02");
-        // msgpack_object_print(stdout, *obj);
-        flb_plg_info(ctx->ins, "=====>>>>>>> debug send: 03");
-        if (!flb_pulsar_send_msg(ctx, obj)) {
+        if (!flb_pulsar_send_msg2(ctx, obj)) {
             flb_plg_error(ctx->ins, "pulsar send msg failed.");
         }
     }
@@ -228,7 +226,7 @@ static void cb_pulsar_flush(struct flb_event_chunk *event_chunk,
     msgpack_unpacked_destroy(&result);
     FLB_OUTPUT_RETURN(FLB_OK);
 }
-*/
+
 static int cb_pulsar_exit(void *data, struct flb_config *config)
 {
     flb_out_pulsar_ctx *ctx = data;
@@ -316,8 +314,8 @@ struct flb_output_plugin out_pulsar_plugin = {
     .name         = "pulsar",
     .description  = "Push events to Pulsar",
     .cb_init      = cb_pulsar_init,
-    // .cb_flush     = cb_pulsar_flush,
-    .cb_flush     = cb_stdout_flush,
+    .cb_flush     = cb_pulsar_flush,
+    // .cb_flush     = cb_stdout_flush,
     .cb_exit      = cb_pulsar_exit,
     .config_map   = config_map,
     .flags        = 0,
