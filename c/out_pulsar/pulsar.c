@@ -86,7 +86,7 @@ bool flb_pulsar_output_msg(flb_out_pulsar_ctx *ctx, msgpack_object* map, struct 
     if (pulsar_send_msg(ctx, out_buf, out_size)) {
         ++stats_ctx.success;
         if (0 == stats_ctx.success % ctx->show_interval) {
-            flb_plg_info(ctx->ins, "output progress, total: %ull, success: %ull, failed: %ull, last msg: %s",
+            flb_plg_info(ctx->ins, "output progress, total: %"PRIu64", success: %"PRIu64", failed: %"PRIu64", last msg: %s",
                 stats_ctx.total, stats_ctx.success, stats_ctx.failed, out_buf);
         }
     } else {
