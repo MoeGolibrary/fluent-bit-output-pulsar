@@ -364,8 +364,8 @@ flb_out_pulsar_ctx* flb_out_pulsar_create(struct flb_output_instance *ins, struc
         get_producer_batching_max_messages(ctx),
         get_producer_batching_max_allowed_size_in_bytes(ctx),
         get_producer_batching_max_publish_delay_ms(ctx),
-        get_producer_encryption_enabled(ctx),
-        // get_producer_crypto_failure_action(ctx)
+        get_producer_encryption_enabled(ctx)
+        // , get_producer_crypto_failure_action(ctx)
         );
 
     return ctx;
