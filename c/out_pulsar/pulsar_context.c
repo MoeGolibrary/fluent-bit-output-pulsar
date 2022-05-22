@@ -9,10 +9,10 @@
 
 static int debug_n = 0;
 
-inline const uint32_t get_config_show_interval(flb_out_pulsar_ctx *ctx) {
+const uint32_t get_config_show_interval(flb_out_pulsar_ctx *ctx) {
     return ctx->show_interval;
 }
-inline const char* get_config_output_schema(flb_out_pulsar_ctx *ctx) {
+const char* get_config_output_schema(flb_out_pulsar_ctx *ctx) {
     switch (ctx->data_schema)
     {
     case FLB_PULSAR_SCHEMA_MSGP:
@@ -23,10 +23,10 @@ inline const char* get_config_output_schema(flb_out_pulsar_ctx *ctx) {
         return "JSON";
     }
 }
-inline const char* get_pulsar_url(flb_out_pulsar_ctx *ctx) {
+const char* get_pulsar_url(flb_out_pulsar_ctx *ctx) {
     return ctx->url;
 }
-inline void mask_memory(char* buf, size_t size, const char *src, size_t len, size_t n) {
+void mask_memory(char* buf, size_t size, const char *src, size_t len, size_t n) {
     memcpy(buf, src, n);
     memset(buf + n, '*', size - (n << 1));
     memcpy(buf + size - n, src + (len - n), n);
@@ -48,19 +48,19 @@ static const char* get_pulsar_auth_token(flb_out_pulsar_ctx *ctx) {
     
     return text;
 }
-inline uint64_t get_pulsar_memory_limit(flb_out_pulsar_ctx *ctx) {
+uint64_t get_pulsar_memory_limit(flb_out_pulsar_ctx *ctx) {
     return pulsar_client_configuration_get_memory_limit(ctx->client_conf);
 }
-inline const char* get_producer_name(flb_out_pulsar_ctx *ctx) {
+const char* get_producer_name(flb_out_pulsar_ctx *ctx) {
     return pulsar_producer_configuration_get_producer_name(ctx->producer_conf);
 }
-inline const char* get_producer_topic(flb_out_pulsar_ctx *ctx) {
+const char* get_producer_topic(flb_out_pulsar_ctx *ctx) {
     return ctx->topic;
 }      
-inline int get_producer_send_timeout(flb_out_pulsar_ctx *ctx) {
+int get_producer_send_timeout(flb_out_pulsar_ctx *ctx) {
     return pulsar_producer_configuration_get_send_timeout(ctx->producer_conf);
 }
-inline const char* get_producer_compression_type(flb_out_pulsar_ctx *ctx) {
+const char* get_producer_compression_type(flb_out_pulsar_ctx *ctx) {
     switch (pulsar_producer_configuration_get_compression_type(ctx->producer_conf))
     {
     case pulsar_CompressionNone:
@@ -77,16 +77,16 @@ inline const char* get_producer_compression_type(flb_out_pulsar_ctx *ctx) {
         return "";
     }
 }
-inline int64_t get_producer_initial_sequence_id(flb_out_pulsar_ctx *ctx) {
+int64_t get_producer_initial_sequence_id(flb_out_pulsar_ctx *ctx) {
     return pulsar_producer_configuration_get_initial_sequence_id(ctx->producer_conf);
 }
-inline int get_producer_max_pending_messages(flb_out_pulsar_ctx *ctx) {
+int get_producer_max_pending_messages(flb_out_pulsar_ctx *ctx) {
     return pulsar_producer_configuration_get_max_pending_messages(ctx->producer_conf);
 }
-inline int get_producer_max_pending_messages_across_partitions(flb_out_pulsar_ctx *ctx) {
+int get_producer_max_pending_messages_across_partitions(flb_out_pulsar_ctx *ctx) {
     return pulsar_producer_configuration_get_max_pending_messages_across_partitions(ctx->producer_conf);
 }
-inline const char* get_producer_partitions_routing_mode(flb_out_pulsar_ctx *ctx) {
+const char* get_producer_partitions_routing_mode(flb_out_pulsar_ctx *ctx) {
     switch (pulsar_producer_configuration_get_partitions_routing_mode(ctx->producer_conf))
     {
     case pulsar_UseSinglePartition:
@@ -97,7 +97,7 @@ inline const char* get_producer_partitions_routing_mode(flb_out_pulsar_ctx *ctx)
         return "Custom";
     }
 }
-inline const char* get_producer_hashing_scheme(flb_out_pulsar_ctx *ctx) {
+const char* get_producer_hashing_scheme(flb_out_pulsar_ctx *ctx) {
     switch (pulsar_producer_configuration_get_hashing_scheme(ctx->producer_conf))
     {
     case pulsar_JavaStringHash:
@@ -110,28 +110,28 @@ inline const char* get_producer_hashing_scheme(flb_out_pulsar_ctx *ctx) {
         return "";
     }
 }
-inline int get_producer_lazy_start_partitioned_producers(flb_out_pulsar_ctx *ctx) {
+int get_producer_lazy_start_partitioned_producers(flb_out_pulsar_ctx *ctx) {
     return pulsar_producer_configuration_get_lazy_start_partitioned_producers(ctx->producer_conf);
 }
-inline const char* get_producer_block_if_queue_full(flb_out_pulsar_ctx *ctx) {
+const char* get_producer_block_if_queue_full(flb_out_pulsar_ctx *ctx) {
     return pulsar_producer_configuration_get_block_if_queue_full(ctx->producer_conf) ? "true" : "false";
 }
-inline const char* get_producer_batching_enabled(flb_out_pulsar_ctx *ctx) {
+const char* get_producer_batching_enabled(flb_out_pulsar_ctx *ctx) {
     return pulsar_producer_configuration_get_batching_enabled(ctx->producer_conf) ? "true" : "false";
 }
-inline uint32_t get_producer_batching_max_messages(flb_out_pulsar_ctx *ctx) {
+uint32_t get_producer_batching_max_messages(flb_out_pulsar_ctx *ctx) {
     return pulsar_producer_configuration_get_batching_max_messages(ctx->producer_conf);
 }
-inline uint32_t get_producer_batching_max_allowed_size_in_bytes(flb_out_pulsar_ctx *ctx) {
+uint32_t get_producer_batching_max_allowed_size_in_bytes(flb_out_pulsar_ctx *ctx) {
     return pulsar_producer_configuration_get_batching_max_allowed_size_in_bytes(ctx->producer_conf);
 }
-inline uint32_t get_producer_batching_max_publish_delay_ms(flb_out_pulsar_ctx *ctx) {
+uint32_t get_producer_batching_max_publish_delay_ms(flb_out_pulsar_ctx *ctx) {
     return pulsar_producer_configuration_get_batching_max_publish_delay_ms(ctx->producer_conf);
 }
-inline const char* get_producer_encryption_enabled(flb_out_pulsar_ctx *ctx) {
+const char* get_producer_encryption_enabled(flb_out_pulsar_ctx *ctx) {
     return pulsar_producer_is_encryption_enabled(ctx->producer_conf) ? "true" : "false";
 }
-inline const char* get_producer_crypto_failure_action(flb_out_pulsar_ctx *ctx) {
+const char* get_producer_crypto_failure_action(flb_out_pulsar_ctx *ctx) {
     switch (pulsar_producer_configuration_get_crypto_failure_action(ctx->producer_conf))
     {
     case pulsar_ProducerSend:
@@ -158,7 +158,6 @@ flb_out_pulsar_ctx* flb_out_pulsar_create(struct flb_output_instance *ins, struc
     char config_log[1 << 12] = { 0 };
     char *plog = config_log;
 
-    flb_plg_info(ins, "----->>>>>> at: 01\n");
     flb_out_pulsar_ctx *ctx = flb_calloc(1, sizeof(flb_out_pulsar_ctx));
     if (!ctx) {
         flb_errno();
@@ -166,7 +165,6 @@ flb_out_pulsar_ctx* flb_out_pulsar_create(struct flb_output_instance *ins, struc
         return NULL;
     }
 
-    flb_plg_info(ins, "----->>>>>> at: 02\n");
     // init context
     ctx->ins = ins;
     ctx->url = NULL;
