@@ -59,7 +59,7 @@ bool flb_pulsar_output_msg(flb_out_pulsar_ctx *ctx, msgpack_object* map, struct 
     if (ret) {
         ++ctx->success_number;
         if (0 == ctx->success_number % ctx->show_interval) {
-            flb_plg_info(ctx->ins, "output progress, total: %"PRIu64", success: %"PRIu64", failed: %"PRIu64", discarded%"PRIu64", last msg: %s",
+            flb_plg_info(ctx->ins, "output progress, total: %"PRIu64", success: %"PRIu64", failed: %"PRIu64", discarded: %"PRIu64", last msg: %s",
                 ctx->total_number, ctx->success_number, ctx->failed_number, ctx->discarded_number, out_buf);
         }
     }
