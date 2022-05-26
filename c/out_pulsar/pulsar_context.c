@@ -7,6 +7,52 @@
 #define PULSAR_DEFAULT_MEMORY_LIMIT 1024
 #define PULSAR_AUTH_TOKEN_MASK_LEN  16
 
+void pulsar_send_callback(pulsar_result code, pulsar_message_id_t *msgId, void *data)
+{
+    pulsar_callback_ctx *pcctx = (pulsar_callback_ctx*)data;
+    if (pulsar_result_Ok == code) {
+        // ...
+    } else {
+        flb_plg_info(pcctx->ctx->ins, "pulsar discard message: %s, msg: %s", pulsar_result_str(ret), pulsar_message_get_data(ctx->msg));
+        ++pcctx->ctx->discarded_number;
+    }
+    if (NULL != msgId) {
+        pulsar_message_id_free(msgId);
+    }
+
+    pulsar_message_free(pcctx->msg);
+    flb_free(pcctx);
+}
+
+bool pulsar_send_msg(flb_out_pulsar_ctx *ctx, const char* data, size_t len) {
+    pulsar_message_t* message = pulsar_message_create();
+    pulsar_message_set_content(message, data, len);
+    pulsar_result ret = pulsar_producer_send(ctx->producer, message);
+    pulsar_message_free(message);
+
+    if (pulsar_result_Ok == ret) {
+        return true;
+    } else {
+        flb_plg_info(ctx->ins, "pulsar publish message failed: %s, msg: %s", pulsar_result_str(ret), data);
+        return false;
+    }
+}
+
+bool pulsar_async_send(flb_out_pulsar_ctx *ctx, const char* data, size_t len) {
+    pulsar_message_t* message = pulsar_message_create();
+    pulsar_message_set_content(message, data, len);
+
+    pulsar_callback_ctx *pcctx = flb_calloc(1, sizeof(pulsar_callback_ctx));
+    pcctx->ctx = ctx;
+    pcctx->msg = message;
+    
+    pulsar_producer_send_async(ctx->producer, message, pulsar_send_callback, pcctx);
+    return true;
+}
+
+const char* get_msg_send_async(flb_out_pulsar_ctx *ctx) {
+    return ctx->is_async ? "true" : "false";
+}
 const uint32_t get_config_show_interval(flb_out_pulsar_ctx *ctx) {
     return ctx->show_interval;
 }
@@ -176,6 +222,7 @@ flb_out_pulsar_ctx* flb_out_pulsar_create(struct flb_output_instance *ins, struc
     ctx->total_number = 0;
     ctx->failed_number = 0;
     ctx->success_number = 0;
+    ctx->discarded_number = 0;
     ctx->data_schema = FLB_PULSAR_SCHEMA_JSON;
     ctx->show_interval = DEFAULT_SHOW_INTERVAL;
 
@@ -192,6 +239,13 @@ flb_out_pulsar_ctx* flb_out_pulsar_create(struct flb_output_instance *ins, struc
         flb_out_pulsar_destroy(ctx);
         flb_plg_error(ins, "field 'PulsarUrl' and 'Topic' must be specified.");
         return NULL;
+    }
+
+    // init pulsar producer send function
+    if (ctx->is_async) {
+        ctx->send_msg_func = pulsar_send_msg;
+    } else {
+        ctx->send_msg_func = pulsar_async_send;
     }
 
     /*
@@ -333,6 +387,7 @@ flb_out_pulsar_ctx* flb_out_pulsar_create(struct flb_output_instance *ins, struc
     }
 
     flb_plg_info(ins, "fluent-bit output plugin for pulsar config:\n"
+        "    is send message by async:               %s\n"
         "    show progress interval:                 %u\n"
         "    output data schema:                     %s\n"
         "    pulsar url:                             %s\n"
@@ -356,6 +411,7 @@ flb_out_pulsar_ctx* flb_out_pulsar_create(struct flb_output_instance *ins, struc
         "    encryption enabled:                     %s\n"
         // "    crypto failure action:                  %s\n"
         ,
+        get_msg_send_async(ctx),
         get_config_show_interval(ctx),
         get_config_output_schema(ctx),
         get_pulsar_url(ctx),

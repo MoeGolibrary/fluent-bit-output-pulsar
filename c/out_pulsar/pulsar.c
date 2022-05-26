@@ -7,34 +7,8 @@
 
 #include "pulsar_context.h"
 
-struct output_statistics_ctx
+bool flb_pulsar_output_msg(flb_out_pulsar_ctx *ctx, msgpack_object* map, struct flb_time *tm)
 {
-    uint64_t total;
-    uint64_t success;
-    uint64_t failed;
-};
-
-struct output_statistics_ctx stats_ctx = {
-    .total   = 0,
-    .success = 0,
-    .failed  = 0
-};
-
-bool pulsar_send_msg(flb_out_pulsar_ctx *ctx, const char* data, size_t len) {
-    pulsar_message_t* message = pulsar_message_create();
-    pulsar_message_set_content(message, data, len);
-    pulsar_result ret = pulsar_producer_send(ctx->producer, message);
-    pulsar_message_free(message);
-
-    if (pulsar_result_Ok == ret) {
-        return true;
-    } else {
-        flb_plg_info(ctx->ins, "pulsar publish message failed: %s, msg: %s", pulsar_result_str(ret), data);
-        return false;
-    }
-}
-
-bool flb_pulsar_output_msg(flb_out_pulsar_ctx *ctx, msgpack_object* map, struct flb_time *tm) {
     char *out_buf;
     size_t out_size;
     
@@ -73,7 +47,6 @@ bool flb_pulsar_output_msg(flb_out_pulsar_ctx *ctx, msgpack_object* map, struct 
             if (!s) {
                 flb_plg_error(ctx->ins, "error encoding to JSON");
                 msgpack_sbuffer_destroy(&mp_sbuf);
-                ++stats_ctx.failed;
                 return false;
             }
             out_buf  = s;
@@ -82,17 +55,14 @@ bool flb_pulsar_output_msg(flb_out_pulsar_ctx *ctx, msgpack_object* map, struct 
         }
     }
 
-    bool ret = pulsar_send_msg(ctx, out_buf, out_size);
+    bool ret = ctx->send_msg_func(ctx, out_buf, out_size);
     if (ret) {
-        ++stats_ctx.success;
-        if (0 == stats_ctx.success % ctx->show_interval) {
-            flb_plg_info(ctx->ins, "output progress, total: %"PRIu64", success: %"PRIu64", failed: %"PRIu64", last msg: %s",
-                stats_ctx.total, stats_ctx.success, stats_ctx.failed, out_buf);
+        ++ctx->success_number;
+        if (0 == ctx->success_number % ctx->show_interval) {
+            flb_plg_info(ctx->ins, "output progress, total: %"PRIu64", success: %"PRIu64", failed: %"PRIu64", discarded%"PRIu64", last msg: %s",
+                ctx->total_number, ctx->success_number, ctx->failed_number, ctx->discarded_number, out_buf);
         }
-    } else {
-        ++stats_ctx.failed;
     }
-    
     if (s) {
         flb_sds_destroy(s);
     }
@@ -129,9 +99,11 @@ static void cb_pulsar_flush(struct flb_event_chunk *event_chunk,
 
     msgpack_unpacked_init(&result);
     while (MSGPACK_UNPACK_SUCCESS == msgpack_unpack_next(&result, event_chunk->data, event_chunk->size, &off)) {
-        ++stats_ctx.total;
+        ++ctx->total_number;
         flb_time_pop_from_msgpack(&tms, &result, &obj);
-        flb_pulsar_output_msg(ctx, obj, &tms);
+        if (!flb_pulsar_output_msg(ctx, obj, &tms)) {
+            ++ctx->failed_number;
+        }
     }
 
     msgpack_unpacked_destroy(&result);
@@ -163,6 +135,11 @@ static struct flb_config_map config_map[] = {
         FLB_CONFIG_MAP_STR, "Topic", (char *)NULL, 0,
         FLB_TRUE, offsetof(flb_out_pulsar_ctx, topic),
         "pulsar producer topic."
+    },
+    {
+        FLB_CONFIG_MAP_BOOL, "IsAsyncSend", "true", 0,
+        FLB_TRUE, offsetof(flb_out_pulsar_ctx, is_async),
+        "is sending a message asynchronous ?"
     },
     {
         FLB_CONFIG_MAP_INT, "ShowInterval", "200", 0,
