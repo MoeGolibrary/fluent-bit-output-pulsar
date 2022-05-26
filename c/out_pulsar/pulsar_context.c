@@ -243,9 +243,9 @@ flb_out_pulsar_ctx* flb_out_pulsar_create(struct flb_output_instance *ins, struc
 
     // init pulsar producer send function
     if (ctx->is_async) {
-        ctx->send_msg_func = pulsar_send_msg;
-    } else {
         ctx->send_msg_func = pulsar_async_send;
+    } else {
+        ctx->send_msg_func = pulsar_send_msg;
     }
 
     /*
