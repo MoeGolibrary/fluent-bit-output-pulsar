@@ -7,9 +7,9 @@
 #define PULSAR_DEFAULT_MEMORY_LIMIT 1024
 #define PULSAR_AUTH_TOKEN_MASK_LEN  16
 
-void pulsar_send_callback(pulsar_result code, pulsar_message_id_t *msgId, void *data)
+void flb_pulsar_send_callback(pulsar_result code, pulsar_message_id_t *msgId, void *data)
 {
-    pulsar_callback_ctx *pcctx = (pulsar_callback_ctx*)data;
+    struct pulsar_callback_ctx *pcctx = (struct pulsar_callback_ctx*)data;
     if (pulsar_result_Ok == code) {
         // ...
     } else {
@@ -42,11 +42,11 @@ bool pulsar_async_send(flb_out_pulsar_ctx *ctx, const char* data, size_t len) {
     pulsar_message_t* message = pulsar_message_create();
     pulsar_message_set_content(message, data, len);
 
-    pulsar_callback_ctx *pcctx = flb_calloc(1, sizeof(pulsar_callback_ctx));
+    struct pulsar_callback_ctx *pcctx = flb_calloc(1, sizeof(struct pulsar_callback_ctx));
     pcctx->ctx = ctx;
     pcctx->msg = message;
     
-    pulsar_producer_send_async(ctx->producer, message, pulsar_send_callback, pcctx);
+    pulsar_producer_send_async(ctx->producer, message, flb_pulsar_send_callback, pcctx);
     return true;
 }
 
