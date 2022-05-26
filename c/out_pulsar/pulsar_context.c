@@ -13,7 +13,7 @@ void flb_pulsar_send_callback(pulsar_result code, pulsar_message_id_t *msgId, vo
     if (pulsar_result_Ok == code) {
         // ...
     } else {
-        flb_plg_info(pcctx->ctx->ins, "pulsar discard message: %s, msg: %s", pulsar_result_str(code), pulsar_message_get_data(ctx->msg));
+        flb_plg_info(pcctx->ctx->ins, "pulsar discard message: %s, msg: %s", pulsar_result_str(code), pulsar_message_get_data(pcctx->msg));
         ++pcctx->ctx->discarded_number;
     }
     if (NULL != msgId) {
