@@ -22,6 +22,7 @@ endif()
 
 # Info
 message(STATUS "Fluent Bit source code: " ${FLB_SOURCE})
+message(STATUS "Apache pulsar headers: " ${PULSAR_CPP_HEADERS})
 message(STATUS "Project source dir: " ${PROJECT_SOURCE_DIR})
 
 # Include Headers
