@@ -122,80 +122,87 @@ static int cb_pulsar_exit(void *data, struct flb_config *config)
 /* Configuration properties map */
 static struct flb_config_map config_map[] = {
     {
-        FLB_CONFIG_MAP_STR, "PulsarUrl", (char *)NULL, 0,
-        FLB_TRUE, offsetof(flb_out_pulsar_ctx, url),
+        FLB_CONFIG_MAP_STR, PULSAR_KEY_BROKER_URL, (char *)NULL, 0, FLB_TRUE, offsetof(flb_out_pulsar_ctx, pulsar_broker_url),
         "pulsar broker or proxy url."
     },
     {
-        FLB_CONFIG_MAP_STR, "Token", (char *)NULL, 0,
-        FLB_TRUE, offsetof(flb_out_pulsar_ctx, token),
+        FLB_CONFIG_MAP_STR, PULSAR_KEY_AUTH_TOKEN, (char *)NULL, 0, FLB_TRUE, offsetof(flb_out_pulsar_ctx, pulsar_auth_token),
         "pulsar authentication token."
     },
     {
-        FLB_CONFIG_MAP_STR, "Topic", (char *)NULL, 0,
-        FLB_TRUE, offsetof(flb_out_pulsar_ctx, topic),
+        FLB_CONFIG_MAP_STR, PULSAR_KEY_TOPIC_NAME, (char *)NULL, 0, FLB_TRUE, offsetof(flb_out_pulsar_ctx, pulsar_producer_topic),
         "pulsar producer topic."
     },
     {
-        FLB_CONFIG_MAP_BOOL, "IsAsyncSend", "true", 0,
-        FLB_TRUE, offsetof(flb_out_pulsar_ctx, is_async),
+        FLB_CONFIG_MAP_BOOL, PULSAR_KEY_ASYNC_SEND, "true", 0, FLB_TRUE, offsetof(flb_out_pulsar_ctx, is_async),
         "is sending a message asynchronous ?"
     },
     {
-        FLB_CONFIG_MAP_INT, "ShowInterval", "200", 0,
-        FLB_TRUE, offsetof(flb_out_pulsar_ctx, show_interval),
+        FLB_CONFIG_MAP_INT, OUTPUT_KEY_SHOW_INTERNAL, "200", 0, FLB_TRUE, offsetof(flb_out_pulsar_ctx, show_interval),
         "show progress interval number."
     },
     {
-        FLB_CONFIG_MAP_INT, "DataSchema", "json", 0, FLB_FALSE, 0,
+        FLB_CONFIG_MAP_INT, OUTPUT_KEY_DATA_SCHEMA, "json", 0, FLB_FALSE, 0,
         "output data schema: json, msgpack, gelf."
     },
     {
-        FLB_CONFIG_MAP_INT, "MemoryLimit", (char *)NULL, 0, FLB_FALSE, 0,
+        FLB_CONFIG_MAP_INT, PULSAR_KEY_MEMORY_LIMIT, (char *)NULL, 0, FLB_FALSE, 0,
         "pulsar client memory limit."
     },
     {
-        FLB_CONFIG_MAP_STR, "ProducerName", (char *)NULL, 0, FLB_FALSE, 0,
+        FLB_CONFIG_MAP_STR, PULSAR_KEY_PRODUCER_NAME, (char *)NULL, 0, FLB_FALSE, 0,
         "pulsar producer name."
     },
     {
-        FLB_CONFIG_MAP_STR, "CompressType", (char *)NULL, 0, FLB_FALSE, 0,
+        FLB_CONFIG_MAP_STR, PULSAR_KEY_COMPRESSION_TYPE, (char *)NULL, 0, FLB_FALSE, 0,
         "pulsar producer compress type."
     },
     {
-        FLB_CONFIG_MAP_STR, "MessageRoutingMode", (char *)NULL, 0, FLB_FALSE, 0,
+        FLB_CONFIG_MAP_STR, PULSAR_KEY_MESSAGE_ROUTING_MODE, (char *)NULL, 0, FLB_FALSE, 0,
         "pulsar producer message routing mode."
     },
     {
-        FLB_CONFIG_MAP_INT, "SendTimeout", (char *)NULL, 0, FLB_FALSE, 0,
+        FLB_CONFIG_MAP_INT, PULSAR_KEY_SEND_TIMEOUT, (char *)NULL, 0, FLB_FALSE, 0,
         "pulsar producer send msg timeout in milliseconds."
     },
     {
-        FLB_CONFIG_MAP_BOOL, "BatchingEnabled", (char *)NULL, 0, FLB_FALSE, 0,
+        FLB_CONFIG_MAP_BOOL, PULSAR_KEY_BATCHING_ENABLED, (char *)NULL, 0, FLB_FALSE, 0,
         "pulsar producer enable batch sending."
     },
     {
-        FLB_CONFIG_MAP_INT, "BatchingMaxMessages", (char *)NULL, 0, FLB_FALSE, 0,
+        FLB_CONFIG_MAP_INT, PULSAR_KEY_BATCHING_MAX_MESSAGES, (char *)NULL, 0, FLB_FALSE, 0,
         "pulsar producer max number of batch sending."
     },
     {
-        FLB_CONFIG_MAP_INT, "BatchingMaxBytes", (char *)NULL, 0, FLB_FALSE, 0,
+        FLB_CONFIG_MAP_INT, PULSAR_KEY_BATCHING_MAX_BYTES, (char *)NULL, 0, FLB_FALSE, 0,
         "pulsar producer max bytes of batch sending."
     },
     {
-        FLB_CONFIG_MAP_INT, "BatchingMaxPublishDelay", (char *)NULL, 0, FLB_FALSE, 0,
+        FLB_CONFIG_MAP_INT, PULSAR_KEY_BATCHING_MAX_DEPLY, (char *)NULL, 0, FLB_FALSE, 0,
         "pulsar producer max delay of batch sending in milliseconds."
     },
     {
-        FLB_CONFIG_MAP_BOOL, "BlockIfQueueFull", (char *)NULL, 0, FLB_FALSE, 0,
+        FLB_CONFIG_MAP_STR, PULSAR_KEY_HASHING_SCHEMA, (char *)NULL, 0, FLB_FALSE, 0,
+        "pulsar producer hash function for partition."
+    },
+    {
+        FLB_CONFIG_MAP_STR, PULSAR_KEY_CRYPTO_FAILURE_ACTION, (char *)NULL, 0, FLB_FALSE, 0,
+        "pulsar producer should take action when encryption fails."
+    },
+    {
+        FLB_CONFIG_MAP_BOOL, PULSAR_KEY_CHUNKING_ENABLED, (char *)NULL, 0, FLB_FALSE, 0,
+        "pulsar producer enable chunking of messages."
+    },
+    {
+        FLB_CONFIG_MAP_BOOL, PULSAR_KEY_BLOCK_IF_QUEUE_FULL, (char *)NULL, 0, FLB_FALSE, 0,
         "pulsar producer enable batch block if queue full."
     },
     {
-        FLB_CONFIG_MAP_INT, "MaxPendingMessages", (char *)NULL, 0, FLB_FALSE, 0,
+        FLB_CONFIG_MAP_INT, PULSAR_KEY_MAX_PENDING_MASSAGES, (char *)NULL, 0, FLB_FALSE, 0,
         "pulsar producer: number of max pending messages."
     },
     {
-        FLB_CONFIG_MAP_INT, "MaxPendingMessagesAcrossPartitions", (char *)NULL, 0, FLB_FALSE, 0,
+        FLB_CONFIG_MAP_INT, PULSAR_KEY_MAX_PENDING_MASSAGES_PARTITIONS, (char *)NULL, 0, FLB_FALSE, 0,
         "pulsar producer: number of max pending messages across all the partitions."
     },
     /* EOF */
@@ -204,7 +211,7 @@ static struct flb_config_map config_map[] = {
 
 struct flb_output_plugin out_pulsar_plugin = {
     .name         = "pulsar",
-    .description  = "Push events to Pulsar",
+    .description  = "Push message to Pulsar",
     .cb_init      = cb_pulsar_init,
     .cb_flush     = cb_pulsar_flush,
     .cb_exit      = cb_pulsar_exit,

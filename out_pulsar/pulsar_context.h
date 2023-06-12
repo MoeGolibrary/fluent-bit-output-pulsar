@@ -6,11 +6,56 @@
 #define FLB_PULSAR_SCHEMA_MSGP 1
 #define FLB_PULSAR_SCHEMA_GELF 2
 
+/*
+extern const char* OUTPUT_KEY_SHOW_INTERNAL;
+extern const char* OUTPUT_KEY_DATA_SCHEMA;
+extern const char* PULSAR_KEY_MEMORY_LIMIT;
+extern const char* PULSAR_KEY_BROKER_URL;
+extern const char* PULSAR_KEY_AUTH_TOKEN;
+extern const char* PULSAR_KEY_ASYNC_SEND;
+extern const char* PULSAR_KEY_PRODUCER_NAME;
+extern const char* PULSAR_KEY_TOPIC_NAME;
+extern const char* PULSAR_KEY_SEND_TIMEOUT;
+extern const char* PULSAR_KEY_BATCHING_ENABLED;
+extern const char* PULSAR_KEY_BATCHING_MAX_MESSAGES;
+extern const char* PULSAR_KEY_BATCHING_MAX_BYTES;
+extern const char* PULSAR_KEY_BATCHING_MAX_DEPLY;
+extern const char* PULSAR_KEY_BLOCK_IF_QUEUE_FULL;
+extern const char* PULSAR_KEY_CHUNKING_ENABLED;
+extern const char* PULSAR_KEY_COMPRESSION_TYPE;
+extern const char* PULSAR_KEY_CRYPTO_FAILURE_ACTION;
+extern const char* PULSAR_KEY_HASHING_SCHEMA;
+extern const char* PULSAR_KEY_MESSAGE_ROUTING_MODE;
+extern const char* PULSAR_KEY_MAX_PENDING_MASSAGES;
+extern const char* PULSAR_KEY_MAX_PENDING_MASSAGES_PARTITIONS;
+/**/
+#define OUTPUT_KEY_SHOW_INTERNAL  "showInterval"
+#define OUTPUT_KEY_DATA_SCHEMA  "dataSchema"
+#define PULSAR_KEY_MEMORY_LIMIT  "memoryLimitBytes"
+#define PULSAR_KEY_BROKER_URL  "pulsarBrokerUrl"
+#define PULSAR_KEY_AUTH_TOKEN  "pulsarAuthToken"
+#define PULSAR_KEY_ASYNC_SEND  "isAsyncSend"
+#define PULSAR_KEY_PRODUCER_NAME  "producerName"
+#define PULSAR_KEY_TOPIC_NAME  "topicName"
+#define PULSAR_KEY_SEND_TIMEOUT  "sendTimeoutMs"
+#define PULSAR_KEY_BATCHING_ENABLED  "batchingEnabled"
+#define PULSAR_KEY_BATCHING_MAX_MESSAGES  "batchingMaxMessages"
+#define PULSAR_KEY_BATCHING_MAX_BYTES  "batchingMaxBytes"
+#define PULSAR_KEY_BATCHING_MAX_DEPLY  "batchingMaxPublishDelayMicros"
+#define PULSAR_KEY_BLOCK_IF_QUEUE_FULL  "blockIfQueueFull"
+#define PULSAR_KEY_CHUNKING_ENABLED  "chunkingEnabled"
+#define PULSAR_KEY_COMPRESSION_TYPE  "compressionType"
+#define PULSAR_KEY_CRYPTO_FAILURE_ACTION  "cryptoFailureAction"
+#define PULSAR_KEY_HASHING_SCHEMA  "hashingScheme"
+#define PULSAR_KEY_MESSAGE_ROUTING_MODE  "messageRoutingMode"
+#define PULSAR_KEY_MAX_PENDING_MASSAGES  "maxPendingMessages"
+#define PULSAR_KEY_MAX_PENDING_MASSAGES_PARTITIONS  "maxPendingMessagesAcrossPartitions"
+/**/
 typedef struct _flb_out_pulsar_context
 {
-    char* url;
-    char* token;
-    char* topic;
+    char* pulsar_broker_url;
+    char* pulsar_auth_token;
+    char* pulsar_producer_topic;
 
     bool is_async;
     uint32_t show_interval;
