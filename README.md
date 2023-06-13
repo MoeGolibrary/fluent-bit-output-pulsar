@@ -81,8 +81,8 @@ Some fields are described as follows, other fields refer to [Pulsar Producer con
 ### Version Dependencies
 | plugin: fluent-bit-output-pulsar | fluent-bit | pulsar-client |
 |----------------------------------|------------|---------------|
-| 1.1.0                            | 2.1.4      | 2.10.4        |
-| 1.0.0                            | 1.9.4      | 2.10.0        |
+| 1.1.0                            | v2.1.4      | v2.10.4      |
+| 1.0.0                            | v1.9.4      | v2.10.0      |
 
 ## Q & A
 * It is possible to encounter some header files that cannot be found during the build process, such as `fluent-bit/flb_info.h` or `pulsar/version.h`.
