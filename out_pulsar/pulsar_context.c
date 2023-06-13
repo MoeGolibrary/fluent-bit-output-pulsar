@@ -7,29 +7,7 @@
 
 #define PULSAR_DEFAULT_MEMORY_LIMIT 8088608
 #define PULSAR_AUTH_TOKEN_MASK_LEN  16
-/*
-const char* OUTPUT_KEY_SHOW_INTERNAL = "showInterval";
-const char* OUTPUT_KEY_DATA_SCHEMA = "dataSchema";
-const char* PULSAR_KEY_MEMORY_LIMIT = "memoryLimitBytes";
-const char* PULSAR_KEY_BROKER_URL = "pulsarBrokerUrl";
-const char* PULSAR_KEY_AUTH_TOKEN = "pulsarAuthToken";
-const char* PULSAR_KEY_ASYNC_SEND = "isAsyncSend";
-const char* PULSAR_KEY_PRODUCER_NAME = "producerName";
-const char* PULSAR_KEY_TOPIC_NAME = "topicName";
-const char* PULSAR_KEY_SEND_TIMEOUT = "sendTimeoutMs";
-const char* PULSAR_KEY_BATCHING_ENABLED = "batchingEnabled";
-const char* PULSAR_KEY_BATCHING_MAX_MESSAGES = "batchingMaxMessages";
-const char* PULSAR_KEY_BATCHING_MAX_BYTES = "batchingMaxBytes";
-const char* PULSAR_KEY_BATCHING_MAX_DEPLY = "batchingMaxPublishDelayMicros";
-const char* PULSAR_KEY_BLOCK_IF_QUEUE_FULL = "blockIfQueueFull";
-const char* PULSAR_KEY_CHUNKING_ENABLED = "chunkingEnabled";
-const char* PULSAR_KEY_COMPRESSION_TYPE = "compressionType";
-const char* PULSAR_KEY_CRYPTO_FAILURE_ACTION = "cryptoFailureAction";
-const char* PULSAR_KEY_HASHING_SCHEMA = "hashingScheme";
-const char* PULSAR_KEY_MESSAGE_ROUTING_MODE = "messageRoutingMode";
-const char* PULSAR_KEY_MAX_PENDING_MASSAGES = "maxPendingMessages";
-const char* PULSAR_KEY_MAX_PENDING_MASSAGES_PARTITIONS = "maxPendingMessagesAcrossPartitions";
-/**/
+
 void flb_pulsar_send_callback(pulsar_result code, pulsar_message_id_t *msgId, void *data)
 {
     struct pulsar_callback_ctx *pcctx = (struct pulsar_callback_ctx*)data;
@@ -47,6 +25,7 @@ void flb_pulsar_send_callback(pulsar_result code, pulsar_message_id_t *msgId, vo
     flb_free(pcctx);
 }
 
+// send messages synchronously
 bool pulsar_send_msg(flb_out_pulsar_ctx *ctx, const char* data, size_t len) {
     pulsar_message_t* message = pulsar_message_create();
     pulsar_message_set_content(message, data, len);
@@ -61,6 +40,7 @@ bool pulsar_send_msg(flb_out_pulsar_ctx *ctx, const char* data, size_t len) {
     }
 }
 
+// send messages asynchronously
 bool pulsar_async_send(flb_out_pulsar_ctx *ctx, const char* data, size_t len) {
     pulsar_message_t* message = pulsar_message_create();
     pulsar_message_set_content(message, data, len);
@@ -266,11 +246,7 @@ flb_out_pulsar_ctx* flb_out_pulsar_create(struct flb_output_instance *ins, struc
     }
 
     // init pulsar producer send function
-    if (ctx->is_async) {
-        ctx->send_msg_func = pulsar_async_send;
-    } else {
-        ctx->send_msg_func = pulsar_send_msg;
-    }
+    ctx->send_msg_func = (ctx->is_async ? pulsar_async_send : pulsar_send_msg);
 
     /*
      * config and create pulsar client
@@ -420,9 +396,7 @@ flb_out_pulsar_ctx* flb_out_pulsar_create(struct flb_output_instance *ins, struc
         return NULL;
     }
     
-    /**
-     * parse data schema
-     */
+    // parse data schema
     pvalue = flb_output_get_property(OUTPUT_KEY_DATA_SCHEMA, ins);
     if (pvalue) {
         if (0 == strcasecmp("JSON", pvalue)) {
@@ -436,6 +410,7 @@ flb_out_pulsar_ctx* flb_out_pulsar_create(struct flb_output_instance *ins, struc
         }
     }
 
+    // print config
     flb_plg_info(ins, "fluent-bit pulsar output plugin config:\n"
         "    show progress interval:                 %u\n"
         "    output data schema:                     %s\n"
@@ -489,6 +464,7 @@ flb_out_pulsar_ctx* flb_out_pulsar_create(struct flb_output_instance *ins, struc
     return ctx;
 }
 
+// close plugin
 void flb_out_pulsar_destroy(flb_out_pulsar_ctx* ctx)
 {
     if (!ctx) {
