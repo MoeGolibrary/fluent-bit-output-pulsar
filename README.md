@@ -1,5 +1,5 @@
 # fluent-bit-output-pulsar
-A fluent-bit output plug-in to output the collected data to pulsar.
+A fluent-bit output plugin to output the collected data to pulsar.
 
 [Fluent Bit](https://docs.fluentbit.io/manual) is a Fast and Lightweight Telemetry Agent for Logs, Metrics, and Traces.
 
