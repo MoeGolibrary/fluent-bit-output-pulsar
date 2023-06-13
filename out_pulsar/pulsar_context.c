@@ -1,12 +1,35 @@
 #include <fluent-bit/flb_output_plugin.h>
 
+#include <pulsar/c/version.h>
 #include <pulsar/c/authentication.h>
 #include <pulsar/c/client.h>
 #include "pulsar_context.h"
 
-#define PULSAR_DEFAULT_MEMORY_LIMIT 1024
+#define PULSAR_DEFAULT_MEMORY_LIMIT 8088608
 #define PULSAR_AUTH_TOKEN_MASK_LEN  16
-
+/*
+const char* OUTPUT_KEY_SHOW_INTERNAL = "showInterval";
+const char* OUTPUT_KEY_DATA_SCHEMA = "dataSchema";
+const char* PULSAR_KEY_MEMORY_LIMIT = "memoryLimitBytes";
+const char* PULSAR_KEY_BROKER_URL = "pulsarBrokerUrl";
+const char* PULSAR_KEY_AUTH_TOKEN = "pulsarAuthToken";
+const char* PULSAR_KEY_ASYNC_SEND = "isAsyncSend";
+const char* PULSAR_KEY_PRODUCER_NAME = "producerName";
+const char* PULSAR_KEY_TOPIC_NAME = "topicName";
+const char* PULSAR_KEY_SEND_TIMEOUT = "sendTimeoutMs";
+const char* PULSAR_KEY_BATCHING_ENABLED = "batchingEnabled";
+const char* PULSAR_KEY_BATCHING_MAX_MESSAGES = "batchingMaxMessages";
+const char* PULSAR_KEY_BATCHING_MAX_BYTES = "batchingMaxBytes";
+const char* PULSAR_KEY_BATCHING_MAX_DEPLY = "batchingMaxPublishDelayMicros";
+const char* PULSAR_KEY_BLOCK_IF_QUEUE_FULL = "blockIfQueueFull";
+const char* PULSAR_KEY_CHUNKING_ENABLED = "chunkingEnabled";
+const char* PULSAR_KEY_COMPRESSION_TYPE = "compressionType";
+const char* PULSAR_KEY_CRYPTO_FAILURE_ACTION = "cryptoFailureAction";
+const char* PULSAR_KEY_HASHING_SCHEMA = "hashingScheme";
+const char* PULSAR_KEY_MESSAGE_ROUTING_MODE = "messageRoutingMode";
+const char* PULSAR_KEY_MAX_PENDING_MASSAGES = "maxPendingMessages";
+const char* PULSAR_KEY_MAX_PENDING_MASSAGES_PARTITIONS = "maxPendingMessagesAcrossPartitions";
+/**/
 void flb_pulsar_send_callback(pulsar_result code, pulsar_message_id_t *msgId, void *data)
 {
     struct pulsar_callback_ctx *pcctx = (struct pulsar_callback_ctx*)data;
@@ -68,7 +91,7 @@ const char* get_config_output_schema(flb_out_pulsar_ctx *ctx) {
     }
 }
 const char* get_pulsar_url(flb_out_pulsar_ctx *ctx) {
-    return ctx->url;
+    return ctx->pulsar_broker_url;
 }
 void mask_memory(char* buf, size_t size, const char *src, size_t len, size_t n) {
     memcpy(buf, src, n);
@@ -77,16 +100,16 @@ void mask_memory(char* buf, size_t size, const char *src, size_t len, size_t n) 
 }
 static const char* get_pulsar_auth_token(flb_out_pulsar_ctx *ctx) {
     static char text[PULSAR_AUTH_TOKEN_MASK_LEN + 1] = { 0 };
-    if (ctx->token) {
-        size_t len = strlen(ctx->token);
+    if (ctx->pulsar_auth_token) {
+        size_t len = strlen(ctx->pulsar_auth_token);
         if (len  < 4) {
             memset(text, '*', PULSAR_AUTH_TOKEN_MASK_LEN);
         } else if (len < 8) {
-            mask_memory(text, PULSAR_AUTH_TOKEN_MASK_LEN, ctx->token, len, 2);
+            mask_memory(text, PULSAR_AUTH_TOKEN_MASK_LEN, ctx->pulsar_auth_token, len, 2);
         } else if (len < 16) {
-            mask_memory(text, PULSAR_AUTH_TOKEN_MASK_LEN, ctx->token, len, 4);
+            mask_memory(text, PULSAR_AUTH_TOKEN_MASK_LEN, ctx->pulsar_auth_token, len, 4);
         } else {
-            mask_memory(text, PULSAR_AUTH_TOKEN_MASK_LEN, ctx->token, len, 6);
+            mask_memory(text, PULSAR_AUTH_TOKEN_MASK_LEN, ctx->pulsar_auth_token, len, 6);
         }
     }
     
@@ -99,7 +122,7 @@ const char* get_producer_name(flb_out_pulsar_ctx *ctx) {
     return pulsar_producer_configuration_get_producer_name(ctx->producer_conf);
 }
 const char* get_producer_topic(flb_out_pulsar_ctx *ctx) {
-    return ctx->topic;
+    return ctx->pulsar_producer_topic;
 }      
 int get_producer_send_timeout(flb_out_pulsar_ctx *ctx) {
     return pulsar_producer_configuration_get_send_timeout(ctx->producer_conf);
@@ -179,14 +202,15 @@ const char* get_producer_crypto_failure_action(flb_out_pulsar_ctx *ctx) {
     switch (pulsar_producer_configuration_get_crypto_failure_action(ctx->producer_conf))
     {
     case pulsar_ProducerSend:
-        return "ProducerSend";
+        return "SEND";
     case pulsar_ProducerFail:
-        return "ProducerFail";
+        return "FAIL";
     default:
         return "";
     }
 }
 
+// int context
 flb_out_pulsar_ctx* flb_out_pulsar_create(struct flb_output_instance *ins, struct flb_config* config)
 {
     int ret;
@@ -211,9 +235,9 @@ flb_out_pulsar_ctx* flb_out_pulsar_create(struct flb_output_instance *ins, struc
 
     // init context
     ctx->ins = ins;
-    ctx->url = NULL;
-    ctx->token = NULL;
-    ctx->topic = NULL;
+    ctx->pulsar_broker_url = NULL;
+    ctx->pulsar_auth_token = NULL;
+    ctx->pulsar_producer_topic = NULL;
     ctx->client = NULL;
     ctx->producer = NULL;
     ctx->authentication = NULL;
@@ -235,9 +259,9 @@ flb_out_pulsar_ctx* flb_out_pulsar_create(struct flb_output_instance *ins, struc
     }
 
     // check url and topic
-    if (ctx->url == NULL || ctx->topic == NULL) {
+    if (ctx->pulsar_broker_url == NULL || ctx->pulsar_producer_topic == NULL) {
         flb_out_pulsar_destroy(ctx);
-        flb_plg_error(ins, "field 'PulsarUrl' and 'Topic' must be specified.");
+        flb_plg_error(ins, "MUST be specify field '%s' and '%s'.", PULSAR_KEY_BROKER_URL, PULSAR_KEY_TOPIC_NAME);
         return NULL;
     }
 
@@ -252,17 +276,17 @@ flb_out_pulsar_ctx* flb_out_pulsar_create(struct flb_output_instance *ins, struc
      * config and create pulsar client
      */
     ctx->client_conf = pulsar_client_configuration_create();
-    if (ctx->token && 0 < strlen(ctx->token)) {
-        ctx->authentication = pulsar_authentication_token_create(ctx->token);
+    if (ctx->pulsar_auth_token && 0 < strlen(ctx->pulsar_auth_token)) {
+        ctx->authentication = pulsar_authentication_token_create(ctx->pulsar_auth_token);
         pulsar_client_configuration_set_auth(ctx->client_conf, ctx->authentication);
     }
 
-    pvalue = flb_output_get_property("MemoryLimit", ins);
+    pvalue = flb_output_get_property(PULSAR_KEY_MEMORY_LIMIT, ins);
     if (pvalue && PULSAR_DEFAULT_MEMORY_LIMIT < (memory_limit = atol(pvalue))) {
         pulsar_client_configuration_set_memory_limit(ctx->client_conf, memory_limit);
     }
     
-    ctx->client = pulsar_client_create(ctx->url, ctx->client_conf);
+    ctx->client = pulsar_client_create(ctx->pulsar_broker_url, ctx->client_conf);
     if (!ctx->client) {
         flb_out_pulsar_destroy(ctx);
         flb_plg_error(ins, "create pulsar client failed !");
@@ -274,14 +298,14 @@ flb_out_pulsar_ctx* flb_out_pulsar_create(struct flb_output_instance *ins, struc
      */
     ctx->producer_conf = pulsar_producer_configuration_create();
 
-    // ProducerName
-    pvalue = flb_output_get_property("ProducerName", ins);
+    // set producerName
+    pvalue = flb_output_get_property(PULSAR_KEY_PRODUCER_NAME, ins);
     if (pvalue) {
         pulsar_producer_configuration_set_producer_name(ctx->producer_conf, pvalue);
     }
 
-    // CompressType
-    pvalue = flb_output_get_property("CompressType", ins);
+    // set compressionType
+    pvalue = flb_output_get_property(PULSAR_KEY_COMPRESSION_TYPE, ins);
     if (pvalue) {
         if (0 == strcasecmp("NONE", pvalue)) {
             pulsar_producer_configuration_set_compression_type(ctx->producer_conf, pulsar_CompressionNone);
@@ -294,18 +318,18 @@ flb_out_pulsar_ctx* flb_out_pulsar_create(struct flb_output_instance *ins, struc
         } else if (0 == strcasecmp("SNAPPY", pvalue)) {
             pulsar_producer_configuration_set_compression_type(ctx->producer_conf, pulsar_CompressionSNAPPY);
         } else {
-            flb_plg_warn(ins, "unsupported pulsar compress type: %s", pvalue);
+            flb_plg_warn(ins, "unsupported pulsar %s: %s", PULSAR_KEY_COMPRESSION_TYPE, pvalue);
         }
     }
 
-    // SendTimeout
-    pvalue = flb_output_get_property("SendTimeout", ins);
+    // set sendTimeoutMs
+    pvalue = flb_output_get_property(PULSAR_KEY_SEND_TIMEOUT, ins);
     if (pvalue && 0 < (send_timeout = atol(pvalue))) {
         pulsar_producer_configuration_set_send_timeout(ctx->producer_conf, send_timeout);
     }
 
-    // MessageRoutingMode
-    pvalue = flb_output_get_property("MessageRoutingMode", ins);
+    // set messageRoutingMode
+    pvalue = flb_output_get_property(PULSAR_KEY_MESSAGE_ROUTING_MODE, ins);
     if (pvalue) {
         if (0 == strcasecmp("UseSingle", pvalue)) {
             pulsar_producer_configuration_set_partitions_routing_mode(ctx->producer_conf, pulsar_UseSinglePartition);
@@ -314,12 +338,12 @@ flb_out_pulsar_ctx* flb_out_pulsar_create(struct flb_output_instance *ins, struc
         } else if (0 == strcasecmp("Custom", pvalue)) {
             pulsar_producer_configuration_set_partitions_routing_mode(ctx->producer_conf, pulsar_CustomPartition);
         } else {
-            flb_plg_warn(ins, "unsupported pulsar message routing mode: %s", pvalue);
+            flb_plg_warn(ins, "unsupported pulsar %s: %s", PULSAR_KEY_MESSAGE_ROUTING_MODE, pvalue);
         }
     }
 
-    // Batching config
-    pvalue = flb_output_get_property("BatchingEnabled", ins);
+    // set batching config
+    pvalue = flb_output_get_property(PULSAR_KEY_BATCHING_ENABLED, ins);
     if (pvalue) {
         if (0 == strcasecmp("true", pvalue)) {
             pulsar_producer_configuration_set_batching_enabled(ctx->producer_conf, true);
@@ -327,21 +351,21 @@ flb_out_pulsar_ctx* flb_out_pulsar_create(struct flb_output_instance *ins, struc
             pulsar_producer_configuration_set_batching_enabled(ctx->producer_conf, false);
         }
     }
-    pvalue = flb_output_get_property("BatchingMaxMessages", ins);
+    pvalue = flb_output_get_property(PULSAR_KEY_BATCHING_MAX_MESSAGES, ins);
     if (pvalue && 0 < (batch_max_msg = atol(pvalue))) {
         pulsar_producer_configuration_set_batching_max_messages(ctx->producer_conf, batch_max_msg);
     }
-    pvalue = flb_output_get_property("BatchingMaxBytes", ins);
+    pvalue = flb_output_get_property(PULSAR_KEY_BATCHING_MAX_BYTES, ins);
     if (pvalue && 0 < (batch_max_bytes = atol(pvalue))) {
         pulsar_producer_configuration_set_batching_max_allowed_size_in_bytes(ctx->producer_conf, batch_max_bytes);
     }
-    pvalue = flb_output_get_property("BatchingMaxPublishDelay", ins);
+    pvalue = flb_output_get_property(PULSAR_KEY_BATCHING_MAX_DEPLY, ins);
     if (pvalue && 0 < (batch_max_delay = atol(pvalue))) {
         pulsar_producer_configuration_set_batching_max_publish_delay_ms(ctx->producer_conf, batch_max_delay);
     }
 
-    // BlockIfQueueFull
-    pvalue = flb_output_get_property("BlockIfQueueFull", ins);
+    // set blockIfQueueFull
+    pvalue = flb_output_get_property(PULSAR_KEY_BLOCK_IF_QUEUE_FULL, ins);
     if (pvalue) {
         if (0 == strcasecmp("true", pvalue)) {
             pulsar_producer_configuration_set_block_if_queue_full(ctx->producer_conf, true);
@@ -350,20 +374,46 @@ flb_out_pulsar_ctx* flb_out_pulsar_create(struct flb_output_instance *ins, struc
         }
     }
 
-    // MaxPendingMessages
-    pvalue = flb_output_get_property("MaxPendingMessages", ins);
+    // set maxPendingMessages
+    pvalue = flb_output_get_property(PULSAR_KEY_MAX_PENDING_MASSAGES, ins);
     if (pvalue && 0 < (max_pending_msg = atol(pvalue))) {
         pulsar_producer_configuration_set_max_pending_messages(ctx->producer_conf, max_pending_msg);
     }
 
-    // MaxPendingMessagesAcrossPartitions
-    pvalue = flb_output_get_property("MaxPendingMessagesAcrossPartitions", ins);
+    // set maxPendingMessagesAcrossPartitions
+    pvalue = flb_output_get_property(PULSAR_KEY_MAX_PENDING_MASSAGES_PARTITIONS, ins);
     if (pvalue && 0 < (max_pending_par = atol(pvalue))) {
         pulsar_producer_configuration_set_max_pending_messages_across_partitions(ctx->producer_conf, max_pending_par);
     }
 
+    // set hashingScheme
+    pvalue = flb_output_get_property(PULSAR_KEY_HASHING_SCHEMA, ins);
+    if (pvalue) {
+        if (0 == strcasecmp("Murmur3_32Hash", pvalue)) {
+            pulsar_producer_configuration_set_hashing_scheme(ctx->producer_conf, pulsar_Murmur3_32Hash);
+        } else if (0 == strcasecmp("BoostHash", pvalue)) {
+            pulsar_producer_configuration_set_hashing_scheme(ctx->producer_conf, pulsar_BoostHash);
+        } else if (0 == strcasecmp("JavaStringHash", pvalue)) {
+            pulsar_producer_configuration_set_hashing_scheme(ctx->producer_conf, pulsar_JavaStringHash);
+        } else {
+            flb_plg_warn(ins, "unsupported pulsar %s: %s", PULSAR_KEY_HASHING_SCHEMA, pvalue);
+        }
+    }
+
+    // set cryptoFailureAction
+    pvalue = flb_output_get_property(PULSAR_KEY_CRYPTO_FAILURE_ACTION, ins);
+    if (pvalue) {
+        if (0 == strcasecmp("FAIL", pvalue)) {
+            pulsar_producer_configuration_set_crypto_failure_action(ctx->producer_conf, pulsar_ProducerFail);
+        } else if (0 == strcasecmp("SEND", pvalue)) {
+            pulsar_producer_configuration_set_crypto_failure_action(ctx->producer_conf, pulsar_ProducerSend);
+        } else {
+            flb_plg_warn(ins, "unsupported pulsar %s: %s", PULSAR_KEY_CRYPTO_FAILURE_ACTION, pvalue);
+        }
+    }
+
     // create pulsar producer
-    err = pulsar_client_create_producer(ctx->client, ctx->topic, ctx->producer_conf, &ctx->producer);
+    err = pulsar_client_create_producer(ctx->client, ctx->pulsar_producer_topic, ctx->producer_conf, &ctx->producer);
     if (err != pulsar_result_Ok) {
         flb_out_pulsar_destroy(ctx);
         flb_plg_error(ins, "Failed to create pulsar producer: %s\n", pulsar_result_str(err));
@@ -373,23 +423,24 @@ flb_out_pulsar_ctx* flb_out_pulsar_create(struct flb_output_instance *ins, struc
     /**
      * parse data schema
      */
-    pvalue = flb_output_get_property("DataSchema", ins);
+    pvalue = flb_output_get_property(OUTPUT_KEY_DATA_SCHEMA, ins);
     if (pvalue) {
-        if (0 == strcasecmp("json", pvalue)) {
+        if (0 == strcasecmp("JSON", pvalue)) {
             ctx->data_schema = FLB_PULSAR_SCHEMA_JSON;
-        } else if (0 == strcasecmp("msgpack", pvalue)) {
+        } else if (0 == strcasecmp("MSGPACK", pvalue)) {
             ctx->data_schema = FLB_PULSAR_SCHEMA_MSGP;
-        } else if (0 == strcasecmp("gelf", pvalue)) {
+        } else if (0 == strcasecmp("GELF", pvalue)) {
             ctx->data_schema = FLB_PULSAR_SCHEMA_GELF;
         } else {
             flb_plg_warn(ins, "unsupported output schema type: %s", pvalue);
         }
     }
 
-    flb_plg_info(ins, "fluent-bit output plugin for pulsar config:\n"
-        "    is send message by async:               %s\n"
+    flb_plg_info(ins, "fluent-bit pulsar output plugin config:\n"
         "    show progress interval:                 %u\n"
         "    output data schema:                     %s\n"
+        "    pulsar client version:                  %u\n"
+        "    is send message by async:               %s\n"
         "    pulsar url:                             %s\n"
         "    auth token:                             %s\n"
         "    memory limit:                           %"PRIu64"\n"
@@ -409,11 +460,11 @@ flb_out_pulsar_ctx* flb_out_pulsar_create(struct flb_output_instance *ins, struc
         "    batching max bytes:                     %u\n"
         "    batching max publish delay:             %u\n"
         "    encryption enabled:                     %s\n"
-        // "    crypto failure action:                  %s\n"
-        ,
-        get_msg_send_async(ctx),
+        "    crypto failure action:                  %s\n",
         get_config_show_interval(ctx),
         get_config_output_schema(ctx),
+        PULSAR_VERSION,
+        get_msg_send_async(ctx),
         get_pulsar_url(ctx),
         get_pulsar_auth_token(ctx),
         get_pulsar_memory_limit(ctx),
@@ -432,9 +483,8 @@ flb_out_pulsar_ctx* flb_out_pulsar_create(struct flb_output_instance *ins, struc
         get_producer_batching_max_messages(ctx),
         get_producer_batching_max_allowed_size_in_bytes(ctx),
         get_producer_batching_max_publish_delay_ms(ctx),
-        get_producer_encryption_enabled(ctx)
-        // , get_producer_crypto_failure_action(ctx)
-        );
+        get_producer_encryption_enabled(ctx),
+        get_producer_crypto_failure_action(ctx));
 
     return ctx;
 }
@@ -467,14 +517,14 @@ void flb_out_pulsar_destroy(flb_out_pulsar_ctx* ctx)
         pulsar_client_configuration_free(ctx->client_conf);
     }
 
-    if (ctx->url) {
-        flb_free(ctx->url);
+    if (ctx->pulsar_broker_url) {
+        flb_free(ctx->pulsar_broker_url);
     }
-    if (ctx->token) {
-        flb_free(ctx->token);
+    if (ctx->pulsar_auth_token) {
+        flb_free(ctx->pulsar_auth_token);
     }
-    if (ctx->topic) {
-        flb_free(ctx->topic);
+    if (ctx->pulsar_producer_topic) {
+        flb_free(ctx->pulsar_producer_topic);
     }
 
     flb_free(ctx);
